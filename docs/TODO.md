@@ -1,88 +1,190 @@
-# TODO, Open Questions & MVP Roadmap for atg-framework
+# TODO — Master Backlog (atg-framework)
 
-Central tracking document for the ATG prototype. All open questions are marked **[OPEN]**. Decisions and progress will be noted here. This is the single source for next steps toward a testable MVP.
+**Purpose:** Ordered next steps and phase gates.  
+**Not for:** Long-form design (→ [`ARCHITECTURE.md`](ARCHITECTURE.md)), binding choices (→ [`DECISIONS.md`](DECISIONS.md)), parked questions (→ [`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md)).
 
-**Current Status (as of creation)**: Repo initialized with README. Skeleton structure and this TODO. No code yet — focus on clarifying architecture before heavy implementation. Linked as untested prototype from local-llm-dev-tools catalog.
+**Status legend:** `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (see OQ)
 
-## Open Questions **[OPEN]** (Architecture & Design)
+---
 
-### Graph & State Management
-- **[OPEN] Graph Library Choice**: Use NetworkX for rich DAG features, visualization, and algorithms (e.g., topological sort, ancestors)? Or implement a lightweight custom DAG (fewer deps, more control)? Or lean heavily into LangGraph's StateGraph from the start for built-in persistence/state?
-  - *Tradeoffs*: NetworkX adds dependency but speeds prototyping; custom keeps core minimal; LangGraph aligns with existing agent patterns but may constrain pure ATG graph model.
-- **[OPEN] History / Evolution Tracking**: Full snapshot of every DAG version? Event log of changes (add node, resolve dependency)? How to store/retrieve for repair without excessive memory use on long-running tasks?
-- **[OPEN] Result Representation & Caching**: How to model node outputs (raw values, metadata like confidence, timestamps)? Caching strategy (hash of task + inputs + context)? Integration with external memory (Chroma/LanceDB for semantic reuse or simple dict for MVP)? Validity/freshness checks?
+## Current focus
 
-### Planning & Decomposition
-- **[OPEN] Atomic Task Definition**: What constitutes an "atomic" node? Pure Python callables? Structured objects with prompt + tool schema + expected output format (Pydantic)? DSPy modules/signatures?
-- **[OPEN] Decomposition Strategy**: LLM prompt design (system prompt, few-shot examples of good decompositions, chain-of-thought)? Use structured output (JSON mode, Pydantic, or DSPy)? Recursive vs. iterative decomposition? How to handle dependencies during decomposition?
-- **[OPEN] Plan Validation During Planning**: Early detection of cycles, missing dependencies, or infeasible plans? Lightweight checker before execution?
+1. **All Phase-1 P0 OQs closed.** Optional next interactive: OQ-0007 (ready-queue, P1) or start Phase 1 code.  
+2. Implement Phase 1 skeleton: `src/atg` (0008) + graph (0005) + types (0006) + tools (0007) + history (0009) + tests.  
 
-### Execution & Parallelism
-- **[OPEN] Parallel Execution Model**: `concurrent.futures.ThreadPoolExecutor` (simple for I/O-bound LLM calls)? `asyncio` with proper handling of LLM clients? Or queue-based scheduler? How to handle shared state or side effects safely?
-- **[OPEN] Dependency Resolution at Runtime**: Topological sort upfront or dynamic ready-queue (nodes become ready as predecessors complete)? Priority or heuristic scheduling?
+**Recently closed:** … OQ-0002→0009; OQ-0006→**0010**.
 
-### Failure, Repair & Robustness
-- **[OPEN] Failure Detection**: Tool exceptions only? LLM self-assessment / output validators (e.g., another LLM call or rule-based)? Custom success predicates per task type? Combination?
-- **[OPEN] Repair Logic**: Simple re-queue of failed node + dependents? LLM-guided repair (analyze failure + history to suggest fixes or alternative decomposition)? How to "freeze" validated upstream results and prevent re-execution?
-- **[OPEN] Error Context for Localization**: What info does the repair module need (failure type, node outputs, graph neighborhood, full history)? How to pass it efficiently?
+---
 
-### Testing, Validation & Benchmarking (Core Strength of This Repo)
-- **[OPEN] Testing Harness Design**: Pytest with heavy use of fixtures and monkeypatching for mock LLMs? Integration with real local models (Ollama) for end-to-end? Property-based testing (Hypothesis) for graph invariants (acyclicity, dependency consistency)?
-- **[OPEN] Validation Components**: Graph structural validators (DAG check, dependency closure)? Plan executability checker? Result schema validators? Performance metrics collector (parallelism ratio, repair savings, success rate, token usage)?
-- **[OPEN] Benchmark Suite**: Simple synthetic tasks (multi-step arithmetic, data pipelines)? Re-implement mini versions of paper benchmarks (e.g., household-like or ALFWorld-inspired)? Metrics aligned with paper (success rate, efficiency, hallucination proxies)?
-- **[OPEN] Mock LLM Strategy**: Deterministic responses for unit tests? Configurable failure injection? Logging of all calls for debugging?
+## Session checkpoint — resume here (2026-07-11)
 
-### Integrations & Usability
-- **[OPEN] DSPy / LangGraph Integration**: How to wrap ATG planner/executor as DSPy modules or LangGraph nodes/graphs? Bidirectional? Expose ATG as a higher-level orchestrator?
-- **[OPEN] Tool Calling**: Standardized way to register tools (OpenAI-style schemas)? Automatic wrapping?
-- **[OPEN] Memory (MCP-like)**: How to persist graph state, node results, and history? Queryable for reuse or debugging? Alignment with your existing MCP code memory work?
-- **[OPEN] Configuration & Extensibility**: YAML/JSON config for models, prompts, parallelism settings? Plugin system for custom planners/repairers?
+**State:** Design/docs phase complete for MVP P0 decisions. **No application code yet** (`src/atg/` not created). Working tree at this checkpoint is documentation + process only.
 
-### Packaging & Project
-- **[OPEN] Project Structure**: Flat src/ or nested packages? Monorepo style or keep focused?
-- **[OPEN] Dependencies**: Minimal core (stdlib + pydantic?) with optional extras (`[langgraph]`, `[networkx]`, `[testing]`)? Poetry, uv, or setuptools?
-- **[OPEN] Documentation**: Sphinx or MkDocs? Docstrings + examples as primary?
-- **[OPEN] License & Distribution**: MIT for max reusability?
+### Done this session
 
-## MVP Roadmap & Prioritized Next Steps
+| Area | Outcome |
+|------|---------|
+| Paper credit | `CITATION.cff`, `docs/citations.bib`, `docs/ATTRIBUTION.md`, README citation, `/attribution` skill |
+| Master design | `docs/ARCHITECTURE.md` (goals, paper map, outdated model stack, package design, phases) |
+| ADR log | `docs/DECISIONS.md` **0001–0010** Accepted; index `docs/adr/README.md` |
+| Open questions | `docs/OPEN_QUESTIONS.md` — P0s promoted; remaining are P1+ |
+| Backlog | This file restructured to phase gates + OQ/ADR refs |
+| Agent guide | `AGENTS.md` |
 
-**MVP Definition**: A minimal end-to-end runnable prototype demonstrating:
-- Task decomposition into DAG.
-- Parallel execution of independent branches.
-- Basic failure handling (at least retry or simple re-execution).
-- Test coverage and a couple of working examples.
-- Clear integration path notes for DSPy/LangGraph.
+### Binding decisions to implement next (do not re-litigate without superseding ADR)
 
-**Phase 1: Foundations (High Priority - Start Here)**
-1. Define core abstractions/interfaces (e.g., `TaskNode`, `DAG`, `Planner`, `Executor` protocols or ABCs).
-2. Implement basic in-memory DAG with dependency tracking and topological utilities (decide on NetworkX vs custom early).
-3. Stub recursive planner with a simple LLM call (via LiteLLM or direct Ollama client) for decomposition.
-4. Basic sequential executor (upgrade to parallel later).
-5. Simple test harness with mock LLM that returns predefined decompositions/responses.
-6. One end-to-end toy example (e.g., "Plan and execute a multi-step research or data task").
-7. Document decisions in this TODO and update README if architecture solidifies.
+| ID | Summary |
+|----|---------|
+| 0005 | Stdlib-only graph (no NetworkX in core) |
+| 0006 | Pydantic v2 public node/result models |
+| 0007 | OpenAI-style tool schema + same-name callable; abstract non-atomic; depth 6; `refine=False`; literals+`$ref` |
+| 0008 | `src/atg/`, uv + pyproject, optional extras |
+| 0009 | Full graph snapshots for history |
+| 0010 | Pluggable parallel runner; ThreadPoolExecutor default |
 
-**Phase 2: Core ATG Features (Medium Priority)**
-8. Parallel execution scheduler.
-9. Result caching skeleton (in-memory dict first).
-10. Basic failure detection + re-execution repair.
-11. Graph history logging (lightweight).
-12. Expanded validation (DAG checks, dependency satisfaction).
-13. More examples and initial benchmark runner.
+Also: 0001 docs system, 0002 custom core (not LangGraph-first), 0003 model-agnostic LLM, 0004 synthetic MVP not paper benchmarks.
 
-**Phase 3: Polish, Integrations & Testing Depth**
-14. Full repair module with localization heuristics.
-15. DSPy/LangGraph adapter examples.
-16. Property-based tests and richer mock capabilities.
-17. Performance metrics and comparison vs. linear baseline agent.
-18. Packaging, docs, and contribution guidelines.
+### Next session — recommended order
 
-**Tracking Progress**: Update this file with completed items, new questions, or experiment results. Use issues or branches for larger features.
+1. Read `AGENTS.md` + `docs/ARCHITECTURE.md` §5 + Decisions **0005–0010**.  
+2. **Code Phase 1 gate:** `pytest` green without LLM:  
+   - `pyproject.toml` + `src/atg/` skeleton (0008)  
+   - `types` (0006) + `graph` (0005) + `history` (0009) + `tools` (0007) + `validation`  
+   - unit tests: topo, cycle, freeze, snapshot, tool registry  
+3. Optional chat OQ before Phase 2: **OQ-0007** (ready-queue vs static levels).  
+4. Process: keep asking remaining OQs **in chat** (user preference); promote answers to ADR.
 
-## Notes
-- All design choices should prioritize **testability and observability** — this repo's strength.
-- Keep core lightweight and focused; push complexity into integrations or optional modules.
-- Revisit paper for details on any ambiguous points during implementation.
-- Link experiments or prototypes back to the tracking repo's ATG entry for visibility.
+### Still open (not blocking Phase 1 skeleton)
 
-This document evolves with the project. Start by tackling Phase 1 open questions and initial code skeleton.
+P1: OQ-0005 planner structured output · OQ-0007 ready-queue · OQ-0008 thought experiment · OQ-0009 repair LCA  
+P2+: license, adapters, persistence, example model tags, paper benchmarks  
+
+### How agents should resume
+
+```
+1. git pull
+2. Read AGENTS.md, docs/TODO.md (this checkpoint), docs/DECISIONS.md (0005–0010)
+3. Start Phase 1 code unless user asks for more OQ Q&A
+```
+
+---
+
+## Phase 0 — Documentation & process
+
+| Done | Item | Refs |
+|------|------|------|
+| [x] | Master architecture / design doc | `ARCHITECTURE.md` |
+| [x] | ADR log + index with rejected alternatives | `DECISIONS.md`, `adr/README.md`, Decisions 0001–0007 |
+| [x] | Central open questions log | `OPEN_QUESTIONS.md` |
+| [x] | Attribution for Zhang et al. (2026) | `ATTRIBUTION.md`, `CITATION.cff` |
+| [x] | README points at doc system | README |
+| [x] | AGENTS.md one-pager for agents | root |
+
+---
+
+## Phase 1 — Foundations (MVP critical path)
+
+**Gate:** `pytest` green; DAG create/topo/cycle/freeze without LLM.
+
+| Done | Item | Refs |
+|------|------|------|
+| [x] | Decide packaging layout | **Decision 0008** (was OQ-0010): `src/atg`, uv, extras |
+| [x] | Decide graph representation | **Decision 0005** (was OQ-0001) |
+| [x] | Modeling standard for node/result types | **Decision 0006** (was OQ-0003; fields may evolve in PRs) |
+| [x] | Tool registry / atomic definition | **Decision 0007** (was OQ-0004) |
+| [ ] | `pyproject.toml` + `src/atg` package skeleton | Decision 0008 |
+| [ ] | `atg.types` + `atg.graph` (DAG ops, freeze marks) | ARCH §5.1–5.2 |
+| [ ] | `atg.history` full snapshot list | **Decision 0009** |
+| [ ] | `atg.validation` acyclicity + basic interface checks | ARCH §5.5 |
+| [ ] | Unit tests for graph/history/validation | ARCH §3.3 |
+| [ ] | Package `__init__` attribution blurb | `ATTRIBUTION.md` |
+
+---
+
+## Phase 2 — Executor
+
+**Gate:** Independent mock tools run concurrently; dependent tools respect order.
+
+| Done | Item | Refs |
+|------|------|------|
+| [x] | Choose parallel runtime default | **Decision 0010** (was OQ-0006): pluggable, threads default |
+| [ ] | Ready-queue executor | [OQ-0007](OPEN_QUESTIONS.md#oq-0007-ready-queue-vs-static-topo-only), paper §4.2 |
+| [ ] | Node state transitions + metrics hooks | ARCH §5.6 |
+| [ ] | Tests: parallel width ≥ 2; order constraints | Decision 0004 |
+
+---
+
+## Phase 3 — Planner
+
+**Gate:** Multi-level compile from mock structured LLM; interface preservation held.
+
+| Done | Item | Refs |
+|------|------|------|
+| [ ] | `LLMClient` protocol + mock | Decision 0003 |
+| [ ] | Recursive compile loop + history snapshots | paper §4.1, OQ-0002 |
+| [ ] | Structured decomposition path | [OQ-0005](OPEN_QUESTIONS.md#oq-0005-decomposition--structured-output-strategy) |
+| [ ] | Fixture-based planner tests (no network) | ARCH §5.5 |
+
+---
+
+## Phase 4 — Thought experiment & repair
+
+**Gate:** Injected failure repairs subgraph; frozen successful nodes not re-executed.
+
+| Done | Item | Refs |
+|------|------|------|
+| [ ] | Structural thought/pre-check | [OQ-0008](OPEN_QUESTIONS.md#oq-0008-failure-detection--thought-experiment) |
+| [ ] | Failure localization + minimal repair | [OQ-0009](OPEN_QUESTIONS.md#oq-0009-repair-localization-algorithm), paper §4.3 |
+| [ ] | Freeze validated regions | Decision 0004 metrics story |
+| [ ] | Failure-injection tests | ARCH §3.3 |
+
+---
+
+## Phase 5 — Real LLM path & examples
+
+**Gate:** Documented example runs with Ollama/LiteLLM via env model.
+
+| Done | Item | Refs |
+|------|------|------|
+| [ ] | LiteLLM-backed `LLMClient` | Decision 0003 |
+| [ ] | Example: multi-step toy task with ≥1 parallel branch | ARCH §3.3 |
+| [ ] | Example model via `ATG_MODEL` | [OQ-0015](OPEN_QUESTIONS.md#oq-0015-default-example-model-tags) |
+| [ ] | Optional `@pytest.mark.integration` | ARCH §5.5 |
+
+---
+
+## Phase 6 — Integrations & polish
+
+**Gate:** Optional extras; CI; clear contrib docs.
+
+| Done | Item | Refs |
+|------|------|------|
+| [ ] | Metrics export (steps, repairs, frozen reuse) | paper-aligned metrics |
+| [ ] | DSPy / LangGraph thin adapters | [OQ-0013](OPEN_QUESTIONS.md#oq-0013-dspy--langgraph-adapter-depth), Decision 0002 |
+| [ ] | Persistence checkpoint (if needed) | [OQ-0014](OPEN_QUESTIONS.md#oq-0014-persistence--memory-backend) |
+| [ ] | License file | [OQ-0011](OPEN_QUESTIONS.md#oq-0011-license) |
+| [ ] | CI: pytest on PR | — |
+| [ ] | Optional paper env adapters | [OQ-0012](OPEN_QUESTIONS.md#oq-0012-paper-benchmark-adapters), Decision 0004 |
+
+---
+
+## Suggested PR sequence
+
+See also `ARCHITECTURE.md` §7.
+
+1. docs: architecture + ADR + OQ + TODO (this set)  
+2. feat: package skeleton + graph core + tests  
+3. feat: executor ready-queue + parallel mocks  
+4. feat: planner mock compile + history  
+5. feat: thought + repair + freeze tests  
+6. feat: LiteLLM path + example  
+7. chore: packaging extras, CI, license  
+
+---
+
+## Notes for agents
+
+- Prefer resolving or explicitly parking (**OQ**) over inventing silent architecture.  
+- Rejected design paths live in **DECISIONS.md** — do not re-propose without new evidence and a superseding ADR.  
+- Credit Zhang et al. (2026) on paper-derived modules (`/attribution`).  
+- Catalog: [local-llm-dev-tools](https://github.com/themark-net/local-llm-dev-tools) (external analysis; not required to build).

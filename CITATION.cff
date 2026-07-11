@@ -1,0 +1,81 @@
+# Citation File Format — https://citation-file-format.github.io/
+# Cite this software repository; preferred-citation is the foundational paper.
+cff-version: 1.2.0
+message: >-
+  If you use this software or its ATG-based design, please cite the Atomic Task
+  Graph paper (preferred-citation) and, when citing the software itself, this
+  repository entry.
+type: software
+title: atg-framework
+abstract: >-
+  Prototype implementation of Atomic Task Graph (ATG) concepts for robust,
+  efficient LLM-based agents. Independent open-source work inspired by the
+  research paper; not an official release from the paper authors.
+license: TBD
+repository-code: https://github.com/themark-net/atg-framework
+url: https://github.com/themark-net/atg-framework
+keywords:
+  - atomic-task-graph
+  - LLM-agents
+  - planning
+  - execution
+  - DAG
+  - agentic-frameworks
+references:
+  - type: article
+    title: "Atomic Task Graph: A Unified Framework for Agentic Planning and Execution"
+    authors:
+      - family-names: Zhang
+        given-names: Yue
+      - family-names: Chen
+        given-names: Sihan
+      - family-names: Huang
+        given-names: Ziwen
+      - family-names: Cui
+        given-names: Hanyun
+      - family-names: Ji
+        given-names: Kangye
+      - family-names: Wang
+        given-names: Zhi
+    year: 2026
+    month: 7
+    identifiers:
+      - type: arxiv
+        value: "2607.01942"
+      - type: doi
+        value: 10.48550/arXiv.2607.01942
+    url: https://arxiv.org/abs/2607.01942
+    repository: https://arxiv.org/html/2607.01942
+    notes: >-
+      Foundational research paper. Core architectural ideas (recursive graph
+      compilation, dependency-aware execution, minimal subgraph repair) originate here.
+preferred-citation:
+  type: article
+  title: "Atomic Task Graph: A Unified Framework for Agentic Planning and Execution"
+  authors:
+    - family-names: Zhang
+      given-names: Yue
+    - family-names: Chen
+      given-names: Sihan
+    - family-names: Huang
+      given-names: Ziwen
+    - family-names: Cui
+      given-names: Hanyun
+    - family-names: Ji
+      given-names: Kangye
+    - family-names: Wang
+      given-names: Zhi
+  year: 2026
+  month: 7
+  journal: arXiv
+  identifiers:
+    - type: arxiv
+      value: "2607.01942"
+    - type: doi
+      value: 10.48550/arXiv.2607.01942
+  url: https://arxiv.org/abs/2607.01942
+  abstract: >-
+    LLM-based agents have shown strong potential for solving complex multi-step
+    tasks. The authors propose Atomic Task Graph (ATG), a unified control
+    framework for planning and execution that maintains an explicit graph to
+    expose dependencies, support reuse, parallel execution, and localized repair.

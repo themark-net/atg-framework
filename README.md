@@ -2,7 +2,44 @@
 
 **Prototype implementation of Atomic Task Graph (ATG) concepts** for building more robust, efficient LLM-based agents.
 
-Based on the research paper: [Atomic Task Graph: A Unified Framework for Agentic Planning and Execution](https://arxiv.org/abs/2607.01942) by researchers from Tsinghua University and South China University of Technology.
+This is an **independent reimplementation** of ideas from the research literature. It is **not** an official release from the paper authors.
+
+## Citation & attribution
+
+Core design is based on:
+
+> Yue Zhang, Sihan Chen, Ziwen Huang, Hanyun Cui, Kangye Ji, and Zhi Wang.  
+> **Atomic Task Graph: A Unified Framework for Agentic Planning and Execution.**  
+> arXiv:2607.01942 \[cs.AI\], 2026.  
+> https://doi.org/10.48550/arXiv.2607.01942 · https://arxiv.org/abs/2607.01942
+
+**Authors** (equal contribution: Sihan Chen, Ziwen Huang): Yue Zhang, Sihan Chen, Ziwen Huang, Hanyun Cui, Kangye Ji, Zhi Wang.  
+**Affiliations:** South China University of Technology; Tsinghua Shenzhen International Graduate School, Tsinghua University.
+
+Machine-readable and policy artifacts:
+
+| Artifact | Purpose |
+|----------|---------|
+| [`CITATION.cff`](CITATION.cff) | GitHub / CFF preferred citation (paper + software) |
+| [`docs/citations.bib`](docs/citations.bib) | BibTeX (`zhang2026atg`) |
+| [`docs/ATTRIBUTION.md`](docs/ATTRIBUTION.md) | What ideas come from the paper, what this repo may claim, code comment norms |
+| `/attribution` skill | Agent checklist so future implementation keeps credit intact |
+
+BibTeX:
+
+```bibtex
+@article{zhang2026atg,
+  title   = {Atomic Task Graph: A Unified Framework for Agentic Planning and Execution},
+  author  = {Zhang, Yue and Chen, Sihan and Huang, Ziwen and Cui, Hanyun and Ji, Kangye and Wang, Zhi},
+  journal = {arXiv preprint arXiv:2607.01942},
+  year    = {2026},
+  eprint  = {2607.01942},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.AI},
+  doi     = {10.48550/arXiv.2607.01942},
+  url     = {https://arxiv.org/abs/2607.01942}
+}
+```
 
 This repository serves as the dedicated development and testing space for ATG ideas. It is linked as an untested prototype from the [local-llm-dev-tools catalog](https://github.com/themark-net/local-llm-dev-tools) (see the ATG entry in TOOLS.md for analysis, feasibility scoring, and distilled methodology).
 
@@ -27,7 +64,18 @@ This repository serves as the dedicated development and testing space for ATG id
 - `examples/`: Toy tasks and end-to-end demos.
 - `tests/`: Comprehensive test suite.
 
-See `docs/TODO.md` (or root TODO.md) for detailed open questions, architecture decisions, and prioritized roadmap to MVP.
+## Documentation system
+
+| Doc | Role |
+|-----|------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Master design: goals, paper map, modernization of outdated paper stack, target layout |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | ADR log (choices + rejected paths) |
+| [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md) | Parked questions (OQ-NNNN) |
+| [`docs/TODO.md`](docs/TODO.md) | Backlog and phase gates |
+| [`docs/ATTRIBUTION.md`](docs/ATTRIBUTION.md) | Paper credit |
+| [`docs/README.md`](docs/README.md) | Doc map |
+
+Workflow: **ARCHITECTURE** → park unknowns in **OPEN_QUESTIONS** → bind choices in **DECISIONS** → execute via **TODO**.
 
 ## Quick Start (Placeholder)
 ```bash
@@ -45,10 +93,14 @@ pytest
 Designed to complement and extend existing setups like DSPy + LiteLLM for orchestration, Ollama for local inference, and custom MCP-style code memory. The explicit graph structure aligns naturally with persistent memory of verified subtasks and dependencies.
 
 ## Links
-- Paper: https://arxiv.org/abs/2607.01942 (and HTML version for reading)
+- Paper (abs): https://arxiv.org/abs/2607.01942
+- Paper (HTML): https://arxiv.org/html/2607.01942
+- Paper (DOI): https://doi.org/10.48550/arXiv.2607.01942
+- Attribution policy: [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)
+- Cite this repo: [CITATION.cff](CITATION.cff) · [docs/citations.bib](docs/citations.bib)
 - Analysis & Tracking Repo: https://github.com/themark-net/local-llm-dev-tools (ATG section — feasibility ~75/100, distilled method, implementation guidance)
 - Related Concepts: Your gom-jobbar-grok4 style agents, LangGraph workflows, etc.
 
-**License**: To be determined (MIT or Apache-2.0 recommended for broad reusability).
+**License**: To be determined (MIT or Apache-2.0 recommended for broad reusability). Software license is separate from the paper’s arXiv license.
 
-Contributions, experiments, and feedback welcome. This is our sandbox to turn the paper's promising architecture into tested, reusable code.
+Contributions, experiments, and feedback welcome. This is our sandbox to turn the paper's promising architecture into tested, reusable code — with correct credit to Zhang et al. (2026).
