@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "atg-framework"
+version = "0.1.0"
+description = "Prototype Atomic Task Graph (ATG) framework for agentic planning and execution."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "themark-net" }]
+keywords = ["agents", "dag", "llm", "atg"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+  "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+llm = [
+  "litellm>=1.0",
+]
+viz = []
+integrations = []
+
+[project.urls]
+Homepage = "https://github.com/themark-net/atg-framework"
+Issues = "https://github.com/themark-net/atg-framework/issues"
+Attribution = "https://github.com/themark-net/atg-framework/blob/main/docs/ATTRIBUTION.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/atg"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/atg" = "atg"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
