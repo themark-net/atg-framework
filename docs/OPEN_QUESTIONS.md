@@ -18,17 +18,19 @@
 | [OQ-0002](#oq-0002-history--evolution-representation) | P0 | promoted-to-adr | History / evolution representation | — | Decision 0009 |
 | [OQ-0003](#oq-0003-node--result-data-model) | P0 | promoted-to-adr | Node & result data model | — | Decision 0006 |
 | [OQ-0004](#oq-0004-atomic-task--tool-definition) | P0 | promoted-to-adr | Atomic task / tool definition | — | Decision 0007 |
-| [OQ-0005](#oq-0005-decomposition--structured-output-strategy) | P1 | open | Decomposition & structured output | Planner quality | Decision 0006 |
+| [OQ-0005](#oq-0005-decomposition--structured-output-strategy) | P1 | promoted-to-adr | Decomposition & structured output | — | Decision 0012 |
 | [OQ-0006](#oq-0006-parallel-execution-runtime) | P0 | promoted-to-adr | Parallel execution runtime | — | Decision 0010 |
-| [OQ-0007](#oq-0007-ready-queue-vs-static-topo-only) | P1 | open | Ready-queue vs static topo only | Scheduler design | paper §4.2 |
-| [OQ-0008](#oq-0008-failure-detection--thought-experiment) | P1 | open | Failure detection & thought experiment | Phase 4 | paper §4.2–4.3 |
-| [OQ-0009](#oq-0009-repair-localization-algorithm) | P1 | open | Repair localization algorithm | Phase 4 | paper §4.3 |
+| [OQ-0007](#oq-0007-ready-queue-vs-static-topo-only) | P1 | promoted-to-adr | Ready-queue vs static topo only | — | Decision 0011 |
+| [OQ-0008](#oq-0008-failure-detection--thought-experiment) | P1 | open | Failure detection & thought experiment | ADR for `atg/thought.py` | paper §4.2–4.3 |
+| [OQ-0009](#oq-0009-repair-localization-algorithm) | P1 | open | Repair localization algorithm | ADR for `atg/repair.py` | paper §4.3 |
 | [OQ-0010](#oq-0010-project-packaging--layout) | P0 | promoted-to-adr | Project packaging & layout | — | Decision 0008 |
-| [OQ-0011](#oq-0011-license) | P2 | open | License | Distribution | README |
+| [OQ-0011](#oq-0011-license) | P2 | promoted-to-adr | License | — | Decision 0016 |
 | [OQ-0012](#oq-0012-paper-benchmark-adapters) | P3 | open | Paper benchmark adapters | Parity experiments | Decision 0004 |
-| [OQ-0013](#oq-0013-dspy--langgraph-adapter-depth) | P2 | open | DSPy / LangGraph adapter depth | Phase 6 | Decision 0002 |
-| [OQ-0014](#oq-0014-persistence--memory-backend) | P2 | open | Persistence / memory backend | Long runs, reuse | ARCH §5 |
-| [OQ-0015](#oq-0015-default-example-model-tags) | P2 | open | Default example model tags | Examples docs | Decision 0003, ARCH §4 |
+| [OQ-0013](#oq-0013-dspy--langgraph-adapter-depth) | P2 | promoted-to-adr | DSPy / LangGraph adapter depth | — | Decision 0013 |
+| [OQ-0014](#oq-0014-persistence--memory-backend) | P2 | promoted-to-adr | Persistence / memory backend | — | Decision 0014 |
+| [OQ-0015](#oq-0015-default-example-model-tags) | P2 | promoted-to-adr | Default example model tags | — | Decision 0015 |
+| [OQ-0016](#oq-0016-repair-escalation-policy) | P2 | open | Repair escalation policy | Repair robustness | OQ-0009, `atg/repair.py` |
+| [OQ-0017](#oq-0017-decomposition-mini-language-details) | P2 | open | Decomposition mini-language details | Planner prompt stability | Decision 0012, `atg/planner.py` |
 
 ---
 
@@ -277,9 +279,9 @@ You can say “R1” and then override individual letters.
 ### OQ-0005: Decomposition & structured output strategy
 
 - **Priority:** P1  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
+- **Updated:** 2026-09-20  
 - **Blocks:** Real planner quality  
 - **Blocked-by:** OQ-0004 (atomic/tool contracts), Decision 0003  
 - **Related-ADR:** Decision 0003; Decision 0006 (Pydantic schemas available)  
@@ -298,7 +300,8 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-09-03:** Promoted to **Decision 0012** (structured JSON compile; recursive decomposition) per ADR index. *ADR body still to be backfilled in `DECISIONS.md` — see TODO housekeeping.*
+- **2026-09-20:** First-pass implementation in `atg/planner.py`: `LLMClient.complete_structured(messages, Decomposition)`; Pydantic schema drives both validation and the prompt's JSON Schema. Open sub-details moved to OQ-0017.
 
 ---
 
@@ -335,9 +338,9 @@ You can say “R1” and then override individual letters.
 ### OQ-0007: Ready-queue vs static topo only
 
 - **Priority:** P1  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
+- **Updated:** 2026-09-20  
 - **Blocks:** Scheduler sophistication  
 - **Blocked-by:** OQ-0006  
 - **Related-ADR:** —  
@@ -352,7 +355,7 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-09-03:** Promoted to **Decision 0011** (dynamic ready-queue scheduler) per ADR index; implemented in `atg/executor.py` (`TaskGraph.ready_set` waves). *ADR body still to be backfilled.*
 
 ---
 
@@ -361,11 +364,11 @@ You can say “R1” and then override individual letters.
 - **Priority:** P1  
 - **Status:** open  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Phase 4 robustness  
-- **Blocked-by:** OQ-0005  
-- **Related-ADR:** —  
-- **Related-code:** `atg/thought.py`, `atg/repair.py`  
+- **Updated:** 2026-09-20  
+- **Blocks:** ADR that binds `atg/thought.py` semantics  
+- **Blocked-by:** —  
+- **Related-ADR:** — (candidate)  
+- **Related-code:** `atg/thought.py`, `atg/agent.py`  
 - **Feature/runbook:** phase-4-repair  
 
 **Question:** Thought experiment = rules-only, LLM judge, or hybrid? Runtime failure = exceptions only or also validators?
@@ -374,7 +377,7 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-09-20 (first-pass implementation, not yet a decision):** `ThoughtExperiment` runs structural rules always — graph validity, every node atomic/registered, tool `required` params present, no unknown params (when the schema lists properties), `$ref` fields exist in the source's declared `output_keys` / tool `returns`. Optional `judge: LLMClient` returns a `JudgeVerdict` and runs only when rules pass. Rejected node ids are routed through `Repairer.repair` like runtime failures (`ATGAgent`). Runtime failure = tool exception only; output validators not implemented. **Maintainer to confirm → `/adr`.**
 
 ---
 
@@ -383,11 +386,11 @@ You can say “R1” and then override individual letters.
 - **Priority:** P1  
 - **Status:** open  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Faithful §4.3 behavior  
-- **Blocked-by:** OQ-0002  
-- **Related-ADR:** —  
-- **Related-code:** `atg/repair.py`  
+- **Updated:** 2026-09-20  
+- **Blocks:** ADR that binds `atg/repair.py` semantics  
+- **Blocked-by:** —  
+- **Related-ADR:** Decision 0009 (history); — (candidate)  
+- **Related-code:** `atg/repair.py`, `atg/planner.py` (`CompiledPlan.records`)  
 - **Feature/runbook:** phase-4-repair  
 
 **Question:** Exact LCA-over-history algorithm and freeze semantics when multiple failures occur?
@@ -398,7 +401,7 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-09-20 (first-pass implementation, not yet a decision):** Lineage is kept in `CompiledPlan.records[node].parent_id` (survives node replacement; snapshots remain the audit trail). `Repairer.lca` = deepest node common to all failed nodes' lineages (single failure ⇒ the node itself, i.e. a localized retry/replan of that subtask). Repair region = all live nodes descended from the LCA; every `done` node outside the region is `frozen`; consumers are rewired back to `lca.outputs.<field>` by inverting the stored bindings; the region is replaced by one abstract node with the LCA's original interface and recompiled with the failure context in the prompt. Escalation (widen after repeated failure) is a repo addition → OQ-0016. **Maintainer to confirm → `/adr`.**
 
 ---
 
@@ -427,9 +430,9 @@ You can say “R1” and then override individual letters.
 ### OQ-0011: License
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
+- **Updated:** 2026-09-03  
 - **Blocks:** Clear redistribution  
 - **Blocked-by:** —  
 - **Related-ADR:** —  
@@ -442,7 +445,7 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-09-03:** Promoted to **Decision 0016** per ADR index (MIT license; `LICENSE` in tree). *ADR body still to be backfilled in `DECISIONS.md`.*
 
 ---
 
@@ -471,9 +474,9 @@ You can say “R1” and then override individual letters.
 ### OQ-0013: DSPy / LangGraph adapter depth
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
+- **Updated:** 2026-09-03  
 - **Blocks:** Phase 6 polish  
 - **Blocked-by:** Decision 0002, working core  
 - **Related-ADR:** Decision 0002  
@@ -486,16 +489,16 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-09-03:** Promoted to **Decision 0013** per ADR index (thin one-way DSPy / LangGraph adapters). *ADR body still to be backfilled in `DECISIONS.md`.*
 
 ---
 
 ### OQ-0014: Persistence / memory backend
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
+- **Updated:** 2026-09-03  
 - **Blocks:** Multi-session reuse  
 - **Blocked-by:** OQ-0002  
 - **Related-ADR:** —  
@@ -508,16 +511,16 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-09-03:** Promoted to **Decision 0014** per ADR index (in-memory MVP; SQLite next). *ADR body still to be backfilled in `DECISIONS.md`.*
 
 ---
 
 ### OQ-0015: Default example model tags
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
+- **Updated:** 2026-09-03  
 - **Blocks:** Copy-paste examples  
 - **Blocked-by:** Decision 0003  
 - **Related-ADR:** Decision 0003  
@@ -529,6 +532,70 @@ You can say “R1” and then override individual letters.
 **Context:** Paper’s Gemma-1.1 / Llama-3 / Mistral-v0.2 are outdated pins—see ARCHITECTURE §4.1.
 
 **Recommendation:** Document `ollama/<current-small-instruct>` as placeholder; read from env `ATG_MODEL`.
+
+**Resolution notes:**
+
+- **2026-09-03:** Promoted to **Decision 0015** per ADR index (example models via `ATG_MODEL` env; implemented in `atg/llm.py::LiteLLMClient`). *ADR body still to be backfilled in `DECISIONS.md`.*
+
+---
+
+### OQ-0016: Repair escalation policy
+
+- **Priority:** P2  
+- **Status:** open  
+- **Created:** 2026-09-20  
+- **Updated:** 2026-09-20  
+- **Blocks:** Repair robustness on real models  
+- **Blocked-by:** OQ-0009  
+- **Related-ADR:** — (candidate; could fold into the OQ-0009 ADR)  
+- **Related-code:** `atg/repair.py::Repairer.localize`, `ATGAgent(escalate_after=…, max_repairs=…)`  
+- **Feature/runbook:** phase-4-repair  
+
+**Question:** When the same region keeps failing, how far should repair widen, and how many total repairs are allowed?
+
+**Context:** Paper §4.3 localizes to the LCA of failed nodes but does not prescribe behaviour when a repaired region fails again. Retrying the same atomic node forever wastes budget; jumping straight to a full replan discards validated work (the thing ATG is meant to avoid).
+
+**Options:**
+
+1. **Current first pass:** walk the failed node's lineage from the root down; the first ancestor-or-self already repaired `escalate_after` (default 1) times forces the repair one level above it; `max_repairs` (default 3) caps the loop.  
+2. Count failures per *tool* rather than per region (transient vs systematic tool errors).  
+3. Let the LLM choose the region from the history (paper-adjacent; costs a call).  
+4. Never escalate; always retry the LCA until `max_repairs`.
+
+**Recommendation:** Keep (1) until real-model runs show a pattern; revisit with data.
+
+**Resolution notes:**
+
+- (none yet)
+
+---
+
+### OQ-0017: Decomposition mini-language details
+
+- **Priority:** P2  
+- **Status:** open  
+- **Created:** 2026-09-20  
+- **Updated:** 2026-09-20  
+- **Blocks:** Prompt stability for small models; schema freeze before Phase 6 adapters  
+- **Blocked-by:** Decision 0012  
+- **Related-ADR:** Decision 0007 (`$ref`), Decision 0012  
+- **Related-code:** `atg/planner.py` (`Decomposition`, `PlannedNode`, `Planner.splice`)  
+- **Feature/runbook:** phase-3-planner  
+
+**Question:** Are the first-pass conventions of the structured decomposition the ones we want to freeze?
+
+**Current conventions (engineering additions on top of Decision 0007):**
+
+1. `{"$parent": "<input>"}` — child inherits the parent's input binding (input-interface preservation).  
+2. `output_bindings: {parent_field: "child.outputs.field"}` as **strings**, must cover exactly the parent's `output_keys`.  
+3. Children may `$ref` only siblings of the same decomposition (never arbitrary graph nodes).  
+4. Child ids are used as-is; on clash with an existing id they become `"<parent>/<child>"`.  
+5. Abstract children must declare `output_keys`; atomic children inherit `output_keys` from `ToolSpec.returns` when omitted.  
+6. Ordering-only edges: parent predecessors → entry children, exit children → parent successors (conservative; may reduce parallelism).
+
+**Options:** keep as-is; replace `$parent` with explicit ids for parent inputs; allow refs to arbitrary existing nodes; always namespace child ids.
+
+**Recommendation:** Validate on a real small model first (Phase 5 gate), then promote via `/adr` with any changes.
 
 **Resolution notes:**
 

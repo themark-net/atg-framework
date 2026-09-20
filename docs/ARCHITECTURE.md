@@ -10,8 +10,8 @@
 | **Master backlog (next steps)** | [`docs/TODO.md`](TODO.md) |
 | **Attribution** | [`docs/ATTRIBUTION.md`](ATTRIBUTION.md) · [`CITATION.cff`](../CITATION.cff) |
 
-**Status:** Draft architecture for greenfield prototype (no package code yet).  
-**Date:** 2026-07-11  
+**Status:** Phases 1–5 first pass in tree (`src/atg`); mock-LLM tests cover the §3.3 MVP criteria; real-model path unvalidated.  
+**Date:** 2026-07-11 (design) · 2026-09-20 (status)  
 **Primary source:** Zhang et al., *Atomic Task Graph…*, arXiv:2607.01942 (2026). Cite as `zhang2026atg`.
 
 ---
@@ -187,27 +187,29 @@ Paper does not ship production package versions. Underspecified for engineering 
 ```
 src/atg/                  # installable package (Decision 0008)
   __init__.py             # version + attribution blurb
-  types.py                # TaskSpec, NodeId, NodeStatus, interfaces
-  graph.py                # TaskGraph, edges, topo, freeze/mark
-  history.py              # refinement snapshots / events
-  tools.py                # Tool registry, schemas
-  planner.py              # recursive compilation
+  types.py                # TaskSpec, TaskNode (output_keys = declared interface), NodeStatus, InputRef
+  graph.py                # TaskGraph, edges, topo, freeze/mark, remove_node, to_mermaid
+  history.py              # refinement snapshots
+  tools.py                # ToolRegistry: OpenAI-style schema + callable (+ optional `returns`)
+  planner.py              # Decomposition schema, CompiledPlan (lineage/bindings), recursive splice
   executor.py             # ready-queue + parallel run
-  thought.py              # pre-execution checks
-  repair.py               # localize + minimal repair
-  llm.py                  # thin LLM port (LiteLLM / protocol)
-  validation.py           # DAG + interface checks
+  runner.py               # ParallelRunner port; thread + sequential runners
+  thought.py              # pre-execution checks (rules + optional LLM judge)
+  repair.py               # LCA over lineage, re-abstract region, freeze, recompile
+  agent.py                # ATGAgent: compile → thought → execute → repair loop
+  llm.py                  # LLMClient protocol, MockLLMClient, LiteLLMClient
+  validation.py           # DAG + $ref checks
   metrics.py              # steps, parallel width, repair stats
-  integrations/           # optional extras
-    dspy_adapter.py
-    langgraph_adapter.py
-examples/
+  integrations/           # optional extras (empty for now)
+examples/weekend_trip.py  # offline demo with failure injection; --real via ATG_MODEL
 tests/
 docs/                     # this system
 pyproject.toml            # uv + extras (Decision 0008)
 ```
 
 **Layering rule:** `graph` / `types` have **no** LLM dependency. Planner/repair depend on `llm` protocol. Integrations depend on core, never the reverse.
+
+**Interface preservation as implemented (first pass):** an abstract node carries `inputs` (literal or `$ref`) and `output_keys`. Its decomposition must (a) reach parent inputs only through `{"$parent": name}`, (b) reference siblings only through `$ref`, and (c) supply `output_bindings` for *exactly* the parent's `output_keys`. On splice the planner rewrites every consumer of `parent.outputs.f` to the bound child output, so downstream nodes never see the refinement. `CompiledPlan.records` keep each node's lineage (`parent_id`) and current bindings so repair can invert the rewrite and re-abstract a region with its original interface. Details still under review: OQ-0017.
 
 ### 5.2 Core data model (binding + sketch)
 
@@ -336,12 +338,12 @@ Aligned with [`docs/TODO.md`](TODO.md). Each phase ends with a verifiable gate.
 
 | Phase | Deliverable | Gate |
 |-------|-------------|------|
-| **0. Docs system** | ARCHITECTURE, DECISIONS, OPEN_QUESTIONS, TODO | You are here |
-| **1. Skeleton package** | `atg/` types + graph + tests for DAG ops | `pytest` green, no LLM |
-| **2. Executor** | ready-queue + parallel mock tools | parallel branch test passes |
-| **3. Planner (stub→LLM)** | recursive compile with mock structured output | multi-level graph from fixture |
-| **4. Thought + repair** | pre-check stub + minimal repair with freeze | failure injection test |
-| **5. Real LLM path** | LiteLLM/Ollama example | documented example runs |
+| **0. Docs system** | ARCHITECTURE, DECISIONS, OPEN_QUESTIONS, TODO | done |
+| **1. Skeleton package** | `atg/` types + graph + tests for DAG ops | done — `pytest` green, no LLM |
+| **2. Executor** | ready-queue + parallel mock tools | done — parallel branch test passes |
+| **3. Planner (stub→LLM)** | recursive compile with mock structured output | done (first pass) — two-level graph from fixture |
+| **4. Thought + repair** | pre-check stub + minimal repair with freeze | done (first pass) — failure injection tests |
+| **5. Real LLM path** | LiteLLM/Ollama example | client + example wired; **gate open**: documented run on a real model |
 | **6. Integrations & polish** | DSPy/LangGraph extras, metrics, packaging | optional extras install |
 
 ### PR-sized slices (suggested)
