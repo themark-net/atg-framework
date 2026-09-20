@@ -61,6 +61,9 @@ class TaskNode(BaseModel):
     name: str
     tool_name: str | None = None
     inputs: dict[str, Any] = Field(default_factory=dict)
+    # Declared external output interface (field names). For abstract nodes this
+    # is the contract a refinement subgraph must preserve (paper §4.1).
+    output_keys: list[str] = Field(default_factory=list)
     outputs: dict[str, Any] | None = None
     status: NodeStatus = NodeStatus.pending
     parent_id: str | None = None
@@ -75,10 +78,18 @@ class TaskNode(BaseModel):
             return self.tool_name is not None
         return self.tool_name is not None and self.tool_name in registered_tools
 
+    @property
+    def depth(self) -> int:
+        """Refinement depth (root = 0); stored in metadata by the planner."""
+        return int(self.metadata.get("depth", 0))
+
 
 class TaskSpec(BaseModel):
     """User-facing problem statement and desired external interface."""
 
     description: str
+    # Literal task parameters; children of the root inherit them via ``$parent``.
+    inputs: dict[str, Any] = Field(default_factory=dict)
+    # Desired output field -> human description. Keys become the root interface.
     outputs: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)

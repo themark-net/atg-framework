@@ -43,6 +43,9 @@ class ExecutionResult:
     def outputs(self) -> dict[str, dict[str, Any] | None]:
         return {n.id: n.outputs for n in self.graph.nodes()}
 
+    def failed_ids(self) -> list[str]:
+        return [n.id for n in self.graph.nodes() if n.status is NodeStatus.failed]
+
 
 def _normalize_output(raw: Any) -> dict[str, Any]:
     if isinstance(raw, dict):
@@ -91,10 +94,13 @@ class GraphExecutor:
             for nid, outcome in zip(ready, outcomes, strict=True):
                 metrics.total_steps += 1
                 if outcome["ok"]:
-                    graph.get(nid).outputs = outcome["outputs"]
+                    node = graph.get(nid)
+                    node.outputs = outcome["outputs"]
+                    node.metadata.pop("error", None)
                     graph.mark_status(nid, NodeStatus.done)
                     metrics.emit(f"node_finished:{nid}")
                 else:
+                    graph.get(nid).metadata["error"] = outcome["error"]
                     graph.mark_status(nid, NodeStatus.failed)
                     metrics.nodes_failed += 1
                     failed_ids.append(nid)

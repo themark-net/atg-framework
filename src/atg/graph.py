@@ -69,6 +69,18 @@ class TaskGraph:
         self._succ[src].discard(dst)
         self._pred[dst].discard(src)
 
+    def remove_node(self, node_id: str) -> TaskNode:
+        """Remove a node and every edge touching it."""
+        node = self.get(node_id)
+        for succ in list(self._succ[node_id]):
+            self._pred[succ].discard(node_id)
+        for pred in list(self._pred[node_id]):
+            self._succ[pred].discard(node_id)
+        del self._succ[node_id]
+        del self._pred[node_id]
+        del self._nodes[node_id]
+        return node
+
     def successors(self, node_id: str) -> frozenset[str]:
         if node_id not in self._nodes:
             raise GraphError(f"Unknown node {node_id!r}")
@@ -160,6 +172,18 @@ class TaskGraph:
             g.add_edge(edge["src"], edge["dst"])
         return g
 
+    def to_mermaid(self) -> str:
+        """Render a ``flowchart TD`` diagram for demos / docs (ARCH §5.6)."""
+        lines = ["flowchart TD"]
+        for node in self.nodes():
+            label = node.name or node.id
+            tool = f" [{node.tool_name}]" if node.tool_name else " (abstract)"
+            safe_id = _mermaid_id(node.id)
+            lines.append(f'  {safe_id}["{label}{tool}\\n{node.status.value}"]')
+        for src, dst in self.edges():
+            lines.append(f"  {_mermaid_id(src)} --> {_mermaid_id(dst)}")
+        return "\n".join(lines)
+
     def _topo(self) -> list[str] | None:
         indeg = {nid: len(self._pred[nid]) for nid in self._nodes}
         queue = deque(nid for nid, d in indeg.items() if d == 0)
@@ -174,3 +198,7 @@ class TaskGraph:
         if len(order) != len(self._nodes):
             return None
         return order
+
+
+def _mermaid_id(node_id: str) -> str:
+    return "".join(ch if ch.isalnum() or ch == "_" else "_" for ch in node_id)

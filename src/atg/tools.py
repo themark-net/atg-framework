@@ -23,6 +23,9 @@ class ToolSpec(BaseModel):
     parameters: dict[str, Any] = Field(
         default_factory=lambda: {"type": "object", "properties": {}}
     )
+    # Optional JSON Schema of the tool's output object. Non-dict return values
+    # are normalized by the executor to ``{"result": value}``.
+    returns: dict[str, Any] | None = None
     refine: bool = True
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -35,6 +38,25 @@ class ToolSpec(BaseModel):
                 "parameters": self.parameters,
             },
         }
+
+    def output_keys(self) -> list[str] | None:
+        """Declared output field names, or ``None`` when unknown."""
+        if not self.returns:
+            return None
+        props = self.returns.get("properties")
+        if not isinstance(props, dict):
+            return None
+        return list(props)
+
+    def required_params(self) -> list[str]:
+        req = self.parameters.get("required", [])
+        return list(req) if isinstance(req, list) else []
+
+    def param_names(self) -> list[str] | None:
+        props = self.parameters.get("properties")
+        if not isinstance(props, dict) or not props:
+            return None
+        return list(props)
 
 
 class ToolRegistry:
