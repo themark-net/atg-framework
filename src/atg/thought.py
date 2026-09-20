@@ -77,7 +77,9 @@ class ThoughtExperiment:
         try:
             validate_graph(graph)
         except ValidationError as exc:
-            issues.append(ThoughtIssue(node_id="*", code="invalid_graph", message=str(exc)))
+            issues.append(
+                ThoughtIssue(node_id="*", code="invalid_graph", message=str(exc))
+            )
             return issues
 
         names = self.registry.names()
@@ -104,7 +106,10 @@ class ThoughtExperiment:
                     )
                 )
             allowed = spec.param_names()
-            if allowed is not None and spec.parameters.get("additionalProperties") is not True:
+            if (
+                allowed is not None
+                and spec.parameters.get("additionalProperties") is not True
+            ):
                 unknown = [k for k in node.inputs if k not in allowed]
                 if unknown:
                     issues.append(

@@ -12,7 +12,7 @@ from atg.history import GraphHistory, GraphSnapshot
 from atg.llm import LiteLLMClient, LLMClient, LLMError, MockLLMClient
 from atg.metrics import RunMetrics
 from atg.planner import CompiledPlan, Decomposition, PlanError, PlannedNode, Planner
-from atg.repair import RepairError, RepairEvent, Repairer
+from atg.repair import Repairer, RepairError, RepairEvent
 from atg.runner import ParallelRunner, SequentialRunner, ThreadPoolRunner
 from atg.thought import ThoughtExperiment, ThoughtIssue, ThoughtReport
 from atg.tools import ToolRegistry, ToolSpec
@@ -20,10 +20,7 @@ from atg.types import InputRef, NodeStatus, TaskNode, TaskSpec
 from atg.validation import ValidationError, validate_graph
 
 __version__ = "0.1.0"
-__attribution__ = (
-    "ATG method: Zhang et al. (2026), arXiv:2607.01942. "
-    "https://doi.org/10.48550/arXiv.2607.01942"
-)
+__attribution__ = "ATG method: Zhang et al. (2026), arXiv:2607.01942. https://doi.org/10.48550/arXiv.2607.01942"
 
 __all__ = [
     "ATGAgent",

@@ -71,7 +71,9 @@ class Decomposition(BaseModel):
     )
     output_bindings: dict[str, str] = Field(
         default_factory=dict,
-        description='Parent output field -> "sibling.outputs.field"; must cover every parent output',
+        description=(
+            'Parent output field -> "sibling.outputs.field"; must cover every parent output'
+        ),
     )
     rationale: str = ""
 
@@ -123,7 +125,9 @@ class CompiledPlan:
 
     def region(self, ancestor_id: str) -> set[str]:
         """Current graph nodes derived from ``ancestor_id`` (inclusive)."""
-        return {nid for nid in self.graph.node_ids() if ancestor_id in self.lineage(nid)}
+        return {
+            nid for nid in self.graph.node_ids() if ancestor_id in self.lineage(nid)
+        }
 
     # ----- atomicity ---------------------------------------------------
 
@@ -142,7 +146,9 @@ class CompiledPlan:
 
     def task_outputs(self, strict: bool = False) -> dict[str, Any]:
         """Resolve the task's external outputs against executed node outputs."""
-        upstream = {n.id: n.outputs for n in self.graph.nodes() if n.outputs is not None}
+        upstream = {
+            n.id: n.outputs for n in self.graph.nodes() if n.outputs is not None
+        }
         result: dict[str, Any] = {}
         for field, ref in self.output_bindings.items():
             node_id, out_field = InputRef(ref=ref).parse()
@@ -170,7 +176,9 @@ class CompiledPlan:
 class Planner:
     """Recursive compiler: refine non-atomic nodes until every node is atomic."""
 
-    def __init__(self, registry: ToolRegistry, llm: LLMClient, max_depth: int = 6) -> None:
+    def __init__(
+        self, registry: ToolRegistry, llm: LLMClient, max_depth: int = 6
+    ) -> None:
         self.registry = registry
         self.llm = llm
         self.max_depth = max_depth
@@ -277,7 +285,9 @@ class Planner:
             raise PlanError(f"Empty decomposition for {parent_id!r}")
         depth = parent.depth + 1
         if depth > self.max_depth:
-            raise PlanError(f"Refining {parent_id!r} exceeds max_depth={self.max_depth}")
+            raise PlanError(
+                f"Refining {parent_id!r} exceeds max_depth={self.max_depth}"
+            )
 
         local_ids = [n.id for n in decomposition.nodes]
         if len(set(local_ids)) != len(local_ids):
@@ -294,8 +304,7 @@ class Planner:
         for planned in decomposition.nodes:
             if planned.tool_name is not None and planned.tool_name not in names:
                 raise PlanError(
-                    f"Child {planned.id!r} of {parent_id!r} uses unknown tool "
-                    f"{planned.tool_name!r}"
+                    f"Child {planned.id!r} of {parent_id!r} uses unknown tool {planned.tool_name!r}"
                 )
             inputs = {
                 key: _resolve_child_input(value, parent, id_map, parent_id)
@@ -360,10 +369,14 @@ class Planner:
                         work.add_edge(src_id, child.id)
             for edge in decomposition.edges:
                 if len(edge) != 2 or edge[0] not in id_map or edge[1] not in id_map:
-                    raise PlanError(f"Bad ordering edge {edge!r} in decomposition of {parent_id!r}")
+                    raise PlanError(
+                        f"Bad ordering edge {edge!r} in decomposition of {parent_id!r}"
+                    )
                 work.add_edge(id_map[edge[0]], id_map[edge[1]])
         except GraphError as exc:
-            raise PlanError(f"Decomposition of {parent_id!r} is not a DAG: {exc}") from exc
+            raise PlanError(
+                f"Decomposition of {parent_id!r} is not a DAG: {exc}"
+            ) from exc
 
         child_ids = {c.id for c in children}
         entry = [c.id for c in children if not (work.predecessors(c.id) & child_ids)]
@@ -485,14 +498,19 @@ def _resolve_child_input(
                 )
             return parent.inputs[name]
         if "$ref" in value:
-            local, field = _parse_ref_string(str(value["$ref"]), f"child input of {parent_id!r}")
+            local, field = _parse_ref_string(
+                str(value["$ref"]), f"child input of {parent_id!r}"
+            )
             if local not in id_map:
                 raise PlanError(
                     f"Child of {parent_id!r} references {local!r}, which is not a sibling "
                     f"in this decomposition (use {PARENT_KEY} for inherited inputs)"
                 )
             return {"$ref": f"{id_map[local]}.outputs.{field}"}
-        return {k: _resolve_child_input(v, parent, id_map, parent_id) for k, v in value.items()}
+        return {
+            k: _resolve_child_input(v, parent, id_map, parent_id)
+            for k, v in value.items()
+        }
     if isinstance(value, list):
         return [_resolve_child_input(v, parent, id_map, parent_id) for v in value]
     return value
@@ -530,4 +548,3 @@ def rewrite_refs(value: Any, mapping: dict[tuple[str, str], str]) -> Any:
     if isinstance(value, list):
         return [rewrite_refs(v, mapping) for v in value]
     return value
-

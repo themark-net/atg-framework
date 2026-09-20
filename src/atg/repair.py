@@ -57,13 +57,18 @@ class Repairer:
         raise RepairError(f"Failed nodes {failed_ids} share no ancestor")
 
     def localize(self, plan: CompiledPlan, failed_ids: list[str]) -> str:
-        """LCA, widened to its parent once a region has been repaired too often."""
+        """LCA, widened past any ancestor-or-self already repaired ``escalate_after`` times.
+
+        Walking from the root downwards, the first ancestor that has exhausted
+        its repair budget forces the repair one level above it (or a full
+        replan at the root). Policy tracked in OQ-0016.
+        """
         lca = self.lca(plan, failed_ids)
-        while self._repairs_of(plan, lca) >= self.escalate_after:
-            parent = plan.records[lca].parent_id if lca in plan.records else None
-            if parent is None:
-                break
-            lca = parent
+        for ancestor in reversed(plan.lineage(lca)):
+            if self._repairs_of(plan, ancestor) >= self.escalate_after:
+                record = plan.records.get(ancestor)
+                parent = record.parent_id if record else None
+                return parent if parent is not None else ancestor
         return lca
 
     def _repairs_of(self, plan: CompiledPlan, node_id: str) -> int:
@@ -106,7 +111,9 @@ class Repairer:
             InputRef(ref=ref).parse(): f"{lca}.outputs.{field}"
             for field, ref in record.bindings.items()
         }
-        doomed = {nid for nid in plan.records if nid != lca and lca in plan.lineage(nid)}
+        doomed = {
+            nid for nid in plan.records if nid != lca and lca in plan.lineage(nid)
+        }
         for node in graph.nodes():
             if node.id not in region:
                 node.inputs = rewrite_refs(node.inputs, inverse)
@@ -114,7 +121,9 @@ class Repairer:
             if rid in doomed:
                 continue
             rec.inputs = rewrite_refs(rec.inputs, inverse)
-            rec.bindings = {f: rewrite_ref_string(r, inverse) for f, r in rec.bindings.items()}
+            rec.bindings = {
+                f: rewrite_ref_string(r, inverse) for f, r in rec.bindings.items()
+            }
         plan.output_bindings = {
             f: rewrite_ref_string(r, inverse) for f, r in plan.output_bindings.items()
         }
@@ -128,7 +137,9 @@ class Repairer:
                         f"region {lca!r}; interface bookkeeping is inconsistent"
                     )
 
-        output_keys = list(record.output_keys) or self._referenced_outputs(plan, lca, region)
+        output_keys = list(record.output_keys) or self._referenced_outputs(
+            plan, lca, region
+        )
 
         frozen: list[str] = []
         for node in graph.nodes():
@@ -179,12 +190,16 @@ class Repairer:
                 "replanned_region": sorted(region),
             },
         }
-        event.refinements = self.planner.refine_until_atomic(plan, only_under=lca, context=context)
+        event.refinements = self.planner.refine_until_atomic(
+            plan, only_under=lca, context=context
+        )
         plan.repair_log[-1]["refinements"] = event.refinements
         return event
 
     @staticmethod
-    def _referenced_outputs(plan: CompiledPlan, lca: str, region: set[str]) -> list[str]:
+    def _referenced_outputs(
+        plan: CompiledPlan, lca: str, region: set[str]
+    ) -> list[str]:
         """Interface of an atomic node with no declared outputs: what consumers use."""
         fields: list[str] = []
 

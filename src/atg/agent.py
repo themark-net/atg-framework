@@ -19,7 +19,7 @@ from atg.executor import ExecutionError, ExecutionResult, GraphExecutor
 from atg.llm import LLMClient
 from atg.metrics import RunMetrics
 from atg.planner import CompiledPlan, Planner
-from atg.repair import RepairError, RepairEvent, Repairer
+from atg.repair import Repairer, RepairError, RepairEvent
 from atg.runner import ParallelRunner
 from atg.thought import ThoughtExperiment, ThoughtReport
 from atg.tools import ToolRegistry
@@ -58,7 +58,9 @@ class ATGAgent:
         self.planner = Planner(registry, llm, max_depth=max_depth)
         self.repairer = Repairer(self.planner, escalate_after=escalate_after)
         self.executor = GraphExecutor(registry, runner=runner, stop_on_failure=True)
-        self.thought = ThoughtExperiment(registry, judge=judge) if thought_experiment else None
+        self.thought = (
+            ThoughtExperiment(registry, judge=judge) if thought_experiment else None
+        )
         self.max_repairs = max_repairs
 
     def run(self, spec: TaskSpec) -> AgentResult:
@@ -73,9 +75,17 @@ class ATGAgent:
                 result.thought_reports.append(report)
                 if not report.ok:
                     metrics.emit(f"thought_reject:{','.join(report.node_ids())}")
-                    flagged = [plan.root_id if n == "*" else n for n in report.node_ids()]
-                    if not self._try_repair(plan, flagged, report.messages_by_node(), result):
-                        return self._finish(result, plan, f"Thought experiment rejected plan: {report.issues}")
+                    flagged = [
+                        plan.root_id if n == "*" else n for n in report.node_ids()
+                    ]
+                    if not self._try_repair(
+                        plan, flagged, report.messages_by_node(), result
+                    ):
+                        return self._finish(
+                            result,
+                            plan,
+                            f"Thought experiment rejected plan: {report.issues}",
+                        )
                     continue
 
             try:
@@ -120,7 +130,9 @@ class ATGAgent:
         return True
 
     @staticmethod
-    def _merge(total: RunMetrics, run: RunMetrics | ExecutionResult, index: int) -> None:
+    def _merge(
+        total: RunMetrics, run: RunMetrics | ExecutionResult, index: int
+    ) -> None:
         m = run.metrics if isinstance(run, ExecutionResult) else run
         total.total_steps += m.total_steps
         total.wall_time_s += m.wall_time_s

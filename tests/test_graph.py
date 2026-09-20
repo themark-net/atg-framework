@@ -83,3 +83,35 @@ def test_subgraph_and_copy():
     copied = g.copy()
     copied.mark_status("a", NodeStatus.done)
     assert g.get("a").status is NodeStatus.pending
+
+
+def test_remove_node_drops_edges():
+    g = TaskGraph()
+    g.add_node(_node("a"))
+    g.add_node(_node("b"))
+    g.add_node(_node("c"))
+    g.add_edge("a", "b")
+    g.add_edge("b", "c")
+    removed = g.remove_node("b")
+    assert removed.id == "b"
+    assert "b" not in g
+    assert g.edges() == []
+    assert g.successors("a") == frozenset()
+    assert g.predecessors("c") == frozenset()
+    try:
+        g.remove_node("b")
+        raise AssertionError("second removal should fail")
+    except GraphError:
+        pass
+
+
+def test_to_mermaid_lists_nodes_and_edges():
+    g = TaskGraph()
+    g.add_node(_node("a", tool_name="echo"))
+    g.add_node(_node("b/c"))
+    g.add_edge("a", "b/c")
+    text = g.to_mermaid()
+    assert text.startswith("flowchart TD")
+    assert 'a["a [echo]' in text
+    assert "(abstract)" in text
+    assert "a --> b_c" in text

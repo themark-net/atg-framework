@@ -120,7 +120,12 @@ class MockLLMClient:
     ) -> ModelT:
         context = dict(context or {})
         self.calls.append(
-            {"kind": "structured", "messages": messages, "schema": schema, "context": context}
+            {
+                "kind": "structured",
+                "messages": messages,
+                "schema": schema,
+                "context": context,
+            }
         )
         if self._handler is not None:
             raw = self._handler(messages, schema, context)
@@ -128,11 +133,15 @@ class MockLLMClient:
             key = str(context.get("node_id"))
             bucket = self._by_key.get(key)
             if not bucket:
-                raise LLMError(f"MockLLMClient has no scripted response for node {key!r}")
+                raise LLMError(
+                    f"MockLLMClient has no scripted response for node {key!r}"
+                )
             raw = bucket[0] if len(bucket) == 1 else bucket.popleft()
         elif self._queue is not None:
             if not self._queue:
-                raise LLMError("MockLLMClient has no scripted structured responses left")
+                raise LLMError(
+                    "MockLLMClient has no scripted structured responses left"
+                )
             raw = self._queue.popleft()
         else:
             raise LLMError("MockLLMClient was created without structured responses")
@@ -163,12 +172,16 @@ class LiteLLMClient:
         try:
             import litellm  # noqa: F401  (optional dependency)
         except ImportError as exc:  # pragma: no cover - depends on extras
-            raise LLMError("Install the [llm] extra: pip install 'atg-framework[llm]'") from exc
+            raise LLMError(
+                "Install the [llm] extra: pip install 'atg-framework[llm]'"
+            ) from exc
         self._litellm = litellm
 
     def complete(self, messages: Messages, **kwargs: Any) -> str:
         params = {"temperature": self.temperature, **self.completion_kwargs, **kwargs}
-        response = self._litellm.completion(model=self.model, messages=messages, **params)
+        response = self._litellm.completion(
+            model=self.model, messages=messages, **params
+        )
         return response["choices"][0]["message"]["content"] or ""
 
     def complete_structured(
