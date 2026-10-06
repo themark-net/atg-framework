@@ -9,5 +9,7 @@
 | [TODO.md](TODO.md) | **Backlog:** next steps and phase gates referencing OQ/ADR |
 | [ATTRIBUTION.md](ATTRIBUTION.md) | Paper credit rules and idea inventory |
 | [citations.bib](citations.bib) | BibTeX |
+| [modules/foundations.md](modules/foundations.md) | Phase 1 package: graph, history, tools, validation |
+| [modules/runtime.md](modules/runtime.md) | Compile, execute, thought, repair, local model, JSON |
 
 **Workflow:** design in ARCHITECTURE → park unknowns in OPEN_QUESTIONS → bind choices in DECISIONS → execute via TODO.

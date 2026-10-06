@@ -387,6 +387,339 @@ Rejected alternatives:
 
 ---
 
+## Decision 0011: Dynamic ready-queue and node status (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0007  
+**Deciders:** Maintainer authorized non-system-impacting Phase 2 decisions in the 2026-10-05 one-shot. The choice follows Zhang et al. (2026) §4.2, which already matched the parked recommendation.
+
+**Context:** Phase 2 must schedule atomic nodes. OQ-0007 asked whether that schedule is a dynamic ready-queue or a static list of topological levels. Paper §4.2 (Dependency-Aware Execution, `zhang2026atg`) says a node becomes executable when its predecessors have finished and its inputs are resolved, and that several such nodes may run at once. The same subsection says execution records each node’s input, output, status, and error. Decision 0010 already separated “what is ready” from “how concurrent work runs.”
+
+**Decision:**
+
+1. **Ready-queue.** A node is ready when its status is `pending` or `ready` and every predecessor status is `done` or `frozen`. The ready set is recomputed as nodes finish. It is not a level partition computed once before the run.
+2. **Parallel wave.** Every currently ready node may be submitted together to the `ParallelRunner` (Decision 0010). When metrics exist, one wave counts as one execution step, matching the paper’s parallel-step accounting. The counter itself is Phase 2.
+3. **Status vocabulary and transitions.** Recorded fields are input, output, status, and error. The only legal moves are `pending → ready → running → done → frozen` and `running → failed`. `failed` requires an error string. `frozen` is only reached from `done`.
+4. **Failure scope.** A `failed` node blocks its descendants (they stay not ready). Other branches stay eligible. Phase 2 must not cancel the whole graph on the first failure.
+5. **Repair reset is out of scope.** There is no `failed → pending` transition. Putting a failed region back to pending belongs to repair (OQ-0009), which will need its own decision if it adds transitions.
+
+`TaskGraph.ready_ids`, `mark_ready`, `transition`, and `freeze` are the Phase 1 contract. The thread-pool loop that calls them is still Phase 2.
+
+**Rationale:** The paper’s readiness rule is event-driven: a node *becomes* executable when predecessors finish. Static levels match that only for a run where nothing fails and the graph never changes. Sibling branches must keep running so validated nodes can later be frozen and reused (§4.3). A fixed transition list keeps `done` and `frozen` meaningful for that reuse.
+
+Rejected alternatives:
+
+1. **Static topological levels only** — simple, but a mid-run failure or a repaired graph invalidates the partition, and the paper describes readiness as something that happens when predecessors finish.  
+2. **Fail-fast cancellation of every other node** — discards sibling work the repair stage is meant to keep.  
+3. **Free-form status strings** — repair cannot trust which nodes are safe to reuse.
+
+**Consequences:**
+
+- Phase 2 executor loop: `mark_ready`, submit those ids to the runner, transition each result to `done` or `failed`, repeat until no ready node remains.  
+- Descendants of `failed` nodes are not ready. Independent nodes still are.  
+- Do not add a status or a backward transition without superseding this decision.  
+- OQ-0007 → `promoted-to-adr`.
+
+**Revisit / supersede when:** in-flight siblings must be cancelled; the async runner needs a different readiness signal; or repair (OQ-0009) needs a transition this list does not have.
+
+**References:** OQ-0007; Decision 0010; Zhang et al. (2026) §4.2 (`zhang2026atg`); `src/atg/graph.py`; `docs/ARCHITECTURE.md` §5.2–5.3.
+
+---
+
+## Decision 0012: Structured decomposition JSON in core (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0005  
+**Deciders:** Maintainer authorized non-privileged open-question decisions in the 2026-10-05 one-shot.
+
+**Context:** The planner has to turn one abstract node into a subgraph. Depth is already 6 (Decision 0007). The open choice was JSON schema, DSPy signatures, or constrained decoding.
+
+**Decision:** `complete_structured` returns a Pydantic `Decomposition` (`nodes`, `edges`). The core prompt asks for that object. DSPy is not on the compile path. Constrained decoding is whatever the model port already does (Ollama `format` is the JSON schema).
+
+**Rationale:** One schema keeps the mock tests and the live model on the same object. The interface check rejects a decomposition that drops a parent `$ref` or a declared sink output, so a fluent but wrong graph does not run.
+
+Rejected alternatives:
+
+1. **DSPy signatures in core** — Decision 0002 keeps DSPy as an adapter.  
+2. **Free text plus a best-effort parser** — fails closed less often and is harder to test.  
+3. **Tool-call messages as the only compile format** — plausible if schema JSON fails on every local instruct model. That is the revisit trigger, not the default.
+
+**Consequences:**
+
+- `compile_task` snapshots once per depth step.  
+- A live failure of `examples/toy_parallel.py --live` on every fallback model reopens the format, not the depth cap.  
+- OQ-0005 → `promoted-to-adr`.
+
+**Revisit / supersede when:** the toy live script fails schema validation for `llama3.1:8b`, `qwen2.5:14b`, and `gemma4:latest`, and a tool-call encoding of the same task succeeds.
+
+**References:** OQ-0005; Decisions 0003, 0006, 0007; Zhang et al. (2026) §4.1 (`zhang2026atg`); `src/atg/planner.py`.
+
+---
+
+## Decision 0013: Structural thought experiment, optional judge (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0008  
+**Deciders:** Same one-shot authorization as Decision 0012.
+
+**Context:** Paper §4.2 runs a cheap check before environment cost. It lists what to look for (tools, dependencies, interfaces) and does not say a second model must judge the plan.
+
+**Decision:** `structural_thought` always runs: closed-graph validation plus atomicity. `thought_experiment(..., llm)` adds one `JudgeVerdict` call only when the rules already passed. `run_task` passes the LLM only when `judge=True` or `ATG_JUDGE=1`. Tool exceptions stay execution failures.
+
+**Rationale:** Rules are deterministic and cover the failures the paper names as structural. A judge can reject a plan the rules accept. The unit test records that split: rules ok, scripted judge not ok. Paying for a judge on every run is optional.
+
+Rejected alternatives:
+
+1. **Rules only, no judge hook** — cannot compare when a semantic miss shows up.  
+2. **Judge on every run** — spends a model call before the deterministic check has failed.  
+3. **A second validation framework for tool return values** — overlaps `declared_outputs` and the tool’s own exception.
+
+**Consequences:**
+
+- Default runs do not call the judge.  
+- `Metrics.judge_disagreements` is 1 when the judge rejects a rule-clean plan.  
+- OQ-0008 → `promoted-to-adr`.
+
+**Revisit / supersede when:** a live task passes structural checks and then fails for a reason other than a tool exception. Re-run that task with `ATG_JUDGE=1` and compare `judge_disagreements` before changing the default.
+
+**References:** OQ-0008; paper §4.2; `src/atg/thought.py`; `tests/test_runtime.py`.
+
+---
+
+## Decision 0014: LCA repair region and a narrow reset (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0009  
+**Deciders:** Same one-shot authorization as Decision 0012.
+
+**Context:** Paper §4.3 localizes failed atomic nodes to their lowest common historical ancestor, repairs that region, and freezes the rest. Decision 0011 forbade `failed → pending` until repair had its own decision.
+
+**Decision:**
+
+1. Lineage is `parent_id`, then the same id in older snapshots.  
+2. The LCA is the common ancestor closest to the failed nodes. No common ancestor means each failed node is its own seed.  
+3. The region is the live nodes under that ancestor plus every downstream node.  
+4. `done` nodes outside the region are frozen. Frozen nodes are not replaced and `reset_for_repair` refuses them.  
+5. The region is removed and replaced by a new `Decomposition` of the region’s external interface.  
+6. `reset_for_repair` may move `done`, `failed`, or `ready` back to `pending` and clear output and error. `transition` still does not allow that move.
+
+**Rationale:** Parent links are already on `TaskNode`. The freeze test is the measurement: a successful sibling’s tool runs once, the failed tool runs again, the sibling status is `frozen`.
+
+Rejected alternatives:
+
+1. **Repair only the failed node and ignore `parent_id`** — misses a bad decomposition that produced several failing siblings. The code already falls back to that when there is no shared ancestor.  
+2. **Re-run the whole graph** — throws away frozen work. The paper’s point is not to.  
+3. **Allow `failed → pending` on `transition`** — any caller could un-freeze a failure. The reset stays on one method.
+
+**Consequences:**
+
+- `run_task` repairs at most twice, then returns.  
+- OQ-0009 → `promoted-to-adr`.
+
+**Revisit / supersede when:** a test that should keep a node frozen shows it inside the region, or the no-common-ancestor union re-executes most of a large graph. Switch that case to “failed node plus descendants” by superseding this decision.
+
+**References:** OQ-0009; Decisions 0009, 0011; paper §4.3; `src/atg/repair.py`.
+
+---
+
+## Decision 0015: JSON checkpoint beside in-memory history (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0014  
+**Deciders:** Same one-shot authorization as Decision 0012.
+
+**Context:** Decision 0009 stores full snapshots in a list. OQ-0014 asked what happens after the process exits.
+
+**Decision:** Runtime history stays in memory. `save_history` / `load_history` persist that list as one JSON file. No SQLite and no vector index.
+
+**Rationale:** Snapshots are already Pydantic models. One file round-trips in a unit test. A database adds an operational dependency before a size problem exists.
+
+Rejected alternatives:
+
+1. **SQLite now** — useful once a file is too large to load whole. Not before.  
+2. **Vector store for semantic reuse** — no task in this repo asks for similarity search.  
+3. **No checkpoint** — a process crash drops the history the repair algorithm needs.
+
+**Consequences:**
+
+- Callers choose the path. The library does not auto-write.  
+- OQ-0014 → `promoted-to-adr`.
+
+**Revisit / supersede when:** a checkpoint is too large to load, or a caller has a real similarity-reuse task.
+
+**References:** OQ-0014; Decision 0009; `src/atg/persist.py`.
+
+---
+
+## Decision 0016: One-way DSPy and LangGraph callables (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0013  
+**Deciders:** Same one-shot authorization as Decision 0012.
+
+**Context:** Decision 0002 keeps those frameworks out of core. OQ-0013 asked how deep an adapter should be.
+
+**Decision:** `as_langgraph_node` and `as_dspy_forward` are plain callables. They run `run_task` and return a dict. They do not import LangGraph or DSPy and they do not sync checkpoints.
+
+**Rationale:** A callable can be placed in either framework without a dependency in this package. Bidirectional sync is a second product.
+
+Rejected alternatives:
+
+1. **Import LangGraph and DSPy in core** — Decision 0002.  
+2. **Bidirectional state sync now** — no caller needs to pause mid-repair.  
+3. **No adapter module** — the integration point stays tribal knowledge.
+
+**Consequences:**
+
+- Optional extra `[integrations]` is unnecessary until those libraries are imported from here.  
+- OQ-0013 → `promoted-to-adr`.
+
+**Revisit / supersede when:** a caller must pause inside an ATG run and resume from the other framework’s checkpointer.
+
+**References:** OQ-0013; Decision 0002; `src/atg/integrations/`.
+
+---
+
+## Decision 0017: Default local model tag (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0015  
+**Deciders:** Same one-shot authorization as Decision 0012. The machine already had Ollama tags installed. No cloud model was called.
+
+**Context:** Examples need a concrete tag. The paper’s Gemma-1.1 / Llama-3 / Mistral-v0.2 pins are outdated (ARCHITECTURE §4). Several local tags exist, including coder models and a cloud tag.
+
+**Decision:** `ATG_MODEL` overrides. The default string is `llama3.1:8b`. If a live compile fails schema or interface checks, try `qwen2.5:14b`, then `gemma4:latest` (the local 8B tag). Do not default to coder-only tags, to tags above about 15B, or to `deepseek-v4-flash:cloud`.
+
+**Rationale:** `llama3.1:8b` is an installed instruct model in the paper’s 7B–8B class. Coder tags are a different job. Larger tags contend with other local eval work. The cloud tag leaves the machine.
+
+Rejected alternatives:
+
+1. **`qwen3.6:35b` or `qwen3-coder:30b` as the default** — stronger, heavier, and not the paper’s size claim.  
+2. **A coder model as the default planner** — wrong specialty unless the instruct tags fail the toy and a coder tag passes it.  
+3. **Hard-code the tag with no env override** — Decision 0003.
+
+**Consequences:**
+
+- `examples/toy_parallel.py --live` applies the fallback order and prints the tag that worked.  
+- OQ-0015 → `promoted-to-adr`.  
+- Measurement (2026-10-05, `examples/toy_parallel.py --live`, timeout 180s, GPU idle at the start of that run): `llama3.1:8b` raised `TimeoutError`. `qwen2.5:14b` returned a decomposition whose edge named the parent id (`add2 -> job`), which `add_edge` rejected. `gemma4:latest` returned JSON whose sinks omitted declared output `value`. No tag exited 0, so the swap trigger below did not fire and the default string stays `llama3.1:8b`.  
+- Comparison landed in the same session, not yet remeasured live: the compiler drops an edge whose endpoint is not a child id, and the system prompt tells the model to copy parent declared outputs onto every sink and to keep the parent id out of the edge list. `tests/test_runtime.py::test_edges_that_name_the_parent_are_ignored` covers the edge drop. A follow-up `--live --model qwen2.5:14b --only` was started and then stopped because a separate bench was loading `gpt-oss:120b` on the same Ollama server. That request was cancelled so it would not evict the other model.
+
+**Revisit / supersede when:** `ollama ps` shows no runner (the other local bench has released the GPU). Then run `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only`. If that exits 0 with `max_parallel >= 2` and sink value 25, supersede this decision and set `DEFAULT_MODEL` to `qwen2.5:14b`. A llama3.1:8b comparison after that uses a timeout above 180s. Do not repeat the identical 180s call. Do not load `qwen3.6:35b`, a coder-only tag, or `deepseek-v4-flash:cloud` for this check. Also re-run when the installed small instruct set changes.
+
+**References:** OQ-0015; Decision 0003; `src/atg/llm.py`; `examples/toy_parallel.py`.
+
+---
+
+## Decision 0018: Paper benchmarks stay deferred (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0012 (closed as wont-do for this milestone)  
+**Deciders:** Same one-shot authorization as Decision 0012. This confirms Decision 0004. It does not supersede it.
+
+**Context:** OQ-0012 asked which paper environment to port. Decision 0004 already deferred ALFWorld, WebShop, and ScienceWorld.
+
+**Decision:** Do not add benchmark adapters. Synthetic tools, mock compiles, parallel execution, and localized repair are the measurement. Metrics that exist now: `waves`, `max_parallel`, `repairs`, `nodes_frozen_reused`.
+
+**Rationale:** Those environments are heavy and drift. The library claims are testable without them.
+
+Rejected alternatives:
+
+1. **Port ALFWorld first** — large harness, not required for the control loop.  
+2. **A toy household clone inside this repo** — still a second product.  
+3. **Treat deferral as temporary silence** — the OQ would look open. It is closed until a named environment is requested.
+
+**Consequences:**
+
+- No `atg/integrations/benchmarks/` package.  
+- OQ-0012 → `wont-do`.
+
+**Revisit / supersede when:** a maintainer names one paper environment to port. Open a new OQ for that environment rather than reopening a blanket “benchmarks” item.
+
+**References:** OQ-0012; Decision 0004; `docs/ARCHITECTURE.md` §3.2.
+
+---
+
+## Decision 0019: MIT license (2026-10-05)
+
+**Status:** Accepted  
+**Promotes:** OQ-0011  
+**Deciders:** Maintainer, in chat (“ok MIT”).
+
+**Context:** OQ-0011 asked MIT versus Apache-2.0. The software license is separate from the arXiv license on Zhang et al. (2026). That paper license does not cover this code.
+
+**Decision:** The software is MIT. The copyright line is `Copyright (c) 2026 themark-net`, the same line already published on `origin/main`. The text is `LICENSE`. `pyproject.toml` and `CITATION.cff` say `MIT`. Citing the paper stays a requirement of `docs/ATTRIBUTION.md`. The license does not replace that citation.
+
+**Rationale:** The library is small, its direct dependencies are MIT, and the maintainer holds no patent for Apache-2.0’s grant to cover. MIT is the shorter grant for reuse.
+
+Rejected alternatives:
+
+1. **Apache-2.0** — the patent grant covers patents the contributors themselves hold. It does not cover a claim by someone else on the paper’s method, and it adds a change-notice practice this repo does not need.  
+2. **Leave the license unset** — blocks a clear redistribution statement.  
+3. **A copyleft license** — the OQ asked for broad reuse. Copyleft was not requested.
+
+**Consequences:**
+
+- `LICENSE` is the software grant.  
+- OQ-0011 → `promoted-to-adr`.  
+- Dependencies keep their own licenses.  
+- Paper credit stays in `CITATION.cff`, `docs/citations.bib`, and `docs/ATTRIBUTION.md`.
+
+**Revisit / supersede when:** a contributor requires an explicit patent grant from this project, or the maintainer chooses copyleft.
+
+**References:** OQ-0011; `LICENSE`; `docs/ATTRIBUTION.md`.
+
+---
+
+## Decision 0020: Third-party gap check against public ATG readings (2026-10-05)
+
+**Status:** Accepted  
+**Deciders:** Maintainer one-shot. Neither source is authoritative over the paper or over Decisions 0002–0019.
+
+**Context:** There is no author SDK, package, or experiment repository for Zhang et al. (2026), arXiv:2607.01942. Two public readings exist. RegardV/ATG-looping (MIT, 2026-07-13) is a Claude Code skill plus a stdlib coding-agent ledger (`algl.py`). The fork hufeide/ATG-looping is two commits ahead (`fei`). Those commits harden the same ledger — relative write paths, a stricter artifact check — and append a build log. They do not add a paper mechanism. SnackOnAI (Mohinish S, 2026-07-15) publishes illustrative snippets reconstructed from §4.1–§4.3. Those snippets were checked against `https://arxiv.org/html/2607.01942v1`. Neither source is official code. Their code was not copied into this repository.
+
+**Decision:** Adopt three behaviors this tree did not have. Record the rest as skipped.
+
+Adopted:
+
+1. A thought-experiment failure that names a live node is repaired before `execute`, then checked again. Paper §4.3 applies repair to thought-experiment failures and to runtime failures. `max_repairs` counts both (Decision 0014).  
+2. `save_history` writes a temporary file and replaces the checkpoint. A failed write leaves the previous file.  
+3. A node still `running` when `execute` starts becomes `failed` with error `interrupted before completion`. That is the legal `running → failed` move (Decision 0011). The tool is not called.
+
+Skipped:
+
+1. **Derived completion from an artifact hash and a gate command** (`algl.py`). Decision 0011 stores status. A node is done when its tool return is recorded, not when a file hash matches.  
+2. **Write-collision serialization, preflight shell gates, consequential scoring, and a sticky per-scope attempt budget.** Those belong to the coding-agent ledger. Decision 0007 tools have no write set. The Love Equation regulator is a different RegardV project and was not read as ATG.  
+3. **Refusing tasks of one to four steps.** The skill states that as usage advice. The paper does not, and a library gate would reject a legal graph.  
+4. **A constraint or budget check in the thought experiment.** The skill lists it. Paper §4.2 lists tool selection, missing steps, dependencies, interfaces, and implausible paths. It does not list a budget.  
+5. **An unscoped judge reason selects no repair region.** Repairing the whole graph would be the global replan Decision 0014 rejected. A reason that names a live node id still repairs.  
+6. **SnackOnAI status name `succeeded`.** Decision 0011 says `done`.  
+7. **String `input_spec` / `output_spec`.** Decision 0007 uses literals and `$ref`.  
+8. **Refinement history as a list of ids.** Decision 0009 stores full snapshots. A `refinement_depth` integer is not in the paper. The snapshot sequence is the history.  
+9. **A judge call on every thought experiment.** Decision 0013 runs structural rules first. The judge stays opt-in.  
+10. **Repair only the failed node and one downstream hop, and the undefined `is_descendant` helper.** The snippet is not runnable. Decision 0014 already bounds the region by the lowest common historical ancestor plus the downstream cone.  
+11. **ALFWorld, WebShop, and ScienceWorld walkthroughs.** Decision 0004. The blog’s benchmark numbers were not re-measured here.
+
+**Rationale:** The three adopted behaviors are in the paper or in the checkpoint/status decisions already accepted. The skipped ones either contradict those decisions or belong to a coding-agent loop the paper does not describe.
+
+Rejected alternatives:
+
+1. **Vendor either source** — both say they are not the paper’s code. Vendoring would also pull the Love Equation bridge.  
+2. **Replace stored status with hash-derived done** — reopens Decision 0011.  
+3. **Treat the blog snippets as the method where they disagree with the HTML paper** — the HTML text wins.
+
+**Consequences:**
+
+- `run_task` may spend part of `max_repairs` before the first `execute`.  
+- `tests/test_runtime.py` covers the three adopted behaviors.  
+- No files from either repository were added.
+
+**Revisit / supersede when:** a judge schema grows a node-id field, or a tool schema grows a declared write set. Either change needs its own decision.
+
+**References:** Zhang et al. (2026) §§4.1–4.3 (`zhang2026atg`); Decisions 0004, 0007, 0009, 0011, 0013, 0014, 0015; https://github.com/RegardV/ATG-looping; https://www.snackonai.com/p/atomic-task-graph-a-7b-model-that-beats-gpt-4-react-on-alfworld-and-webshop-has-nothing-to-do-with-t; `docs/ATTRIBUTION.md`.
+
+---
+
 ## How to add a decision
 
 1. Assign next ID (`NNNN` = max + 1, never reuse).  

@@ -1,0 +1,50 @@
+[project]
+name = "atg-framework"
+version = "0.2.0"
+description = "Atomic Task Graph control library. Independent reimplementation of concepts from Zhang et al. (2026)."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "themark-net" }]
+keywords = ["agents", "dag", "llm", "atg"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "pydantic>=2",
+]
+
+# Extras [llm], [viz], and [integrations] are reserved by Decision 0008.
+# They are added when those dependencies exist. Phase 1 ships dev only.
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+llm = [
+    "litellm>=1.70",
+]
+
+[project.urls]
+Homepage = "https://github.com/themark-net/atg-framework"
+Issues = "https://github.com/themark-net/atg-framework/issues"
+Paper = "https://arxiv.org/abs/2607.01942"
+Documentation = "https://github.com/themark-net/atg-framework/blob/main/docs/ARCHITECTURE.md"
+Attribution = "https://github.com/themark-net/atg-framework/blob/main/docs/ATTRIBUTION.md"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/atg"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: local Ollama; skipped unless ATG_RUN_INTEGRATION=1",
+]

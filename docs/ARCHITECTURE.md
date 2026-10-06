@@ -10,8 +10,8 @@
 | **Master backlog (next steps)** | [`docs/TODO.md`](TODO.md) |
 | **Attribution** | [`docs/ATTRIBUTION.md`](ATTRIBUTION.md) · [`CITATION.cff`](../CITATION.cff) |
 
-**Status:** Draft architecture for greenfield prototype (no package code yet).  
-**Date:** 2026-07-11  
+**Status:** The MVP loop is implemented: compile, structural check, parallel execute, localized repair, JSON checkpoint, and an offline example. Live Ollama measurement is Decision 0017 (three tags failed on 2026-10-05; default unchanged; remeasure waits while other local benches hold Ollama). Software license is MIT (Decision 0019).  
+**Date:** 2026-07-11 (design). Runtime: 2026-10-05.  
 **Primary source:** Zhang et al., *Atomic Task Graph…*, arXiv:2607.01942 (2026). Cite as `zhang2026atg`.
 
 ---
@@ -209,6 +209,8 @@ pyproject.toml            # uv + extras (Decision 0008)
 
 **Layering rule:** `graph` / `types` have **no** LLM dependency. Planner/repair depend on `llm` protocol. Integrations depend on core, never the reverse.
 
+Phase 1 modules (`types`, `graph`, `history`, `tools`, `validation`) and the runtime (`planner`, `executor`, `thought`, `repair`, `llm`, `metrics`, `persist`, `integrations`) are in `src/atg/`. Operator maps: [`docs/modules/foundations.md`](modules/foundations.md), [`docs/modules/runtime.md`](modules/runtime.md).
+
 ### 5.2 Core data model (binding + sketch)
 
 | Concern | Binding |
@@ -216,34 +218,9 @@ pyproject.toml            # uv + extras (Decision 0008)
 | Graph topology & algorithms | **Decision 0005** — stdlib-only (no NetworkX in core) |
 | Node / result / DTO modeling | **Decision 0006** — Pydantic v2 public models |
 | Tool / atomic definition | **Decision 0007** — OpenAI-style schema + callable; abstract non-atomic; `refine=False`; literals+`$ref` |
+| Ready-set and status moves | **Decision 0011** — dynamic ready-queue; `pending → ready → running → done → frozen`, plus `running → failed` |
 
-```python
-# Sketch — field names may evolve in PRs; Pydantic is the standard (Decision 0006).
-from pydantic import BaseModel, Field
-from enum import Enum
-from typing import Any
-
-class NodeStatus(str, Enum):
-    pending = "pending"
-    ready = "ready"
-    running = "running"
-    done = "done"
-    failed = "failed"
-    frozen = "frozen"
-
-class TaskNode(BaseModel):
-    id: str
-    name: str
-    tool_name: str | None = None   # None / unset ⇒ non-atomic until compile finishes (see OQ-0004)
-    inputs: dict[str, Any] = Field(default_factory=dict)  # literals or refs to upstream
-    outputs: dict[str, Any] | None = None
-    status: NodeStatus = NodeStatus.pending
-    parent_id: str | None = None   # refinement parent for history LCA
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-# TaskGraph: stdlib container (Decision 0005) holding TaskNode values (Decision 0006)
-# GraphSnapshot / GraphHistory: full immutable snapshots per step (Decision 0009)
-```
+The implemented model is `TaskNode` in `src/atg/types.py` (Pydantic v2, frozen). Fields: `id`, `name`, `tool_name`, `inputs` (literals or `{"$ref": "node_id.outputs.field"}`), `outputs`, `declared_outputs`, `status`, `parent_id`, `refine`, `error`, `metadata`. Status changes go through `TaskGraph.transition` (Decision 0011). `GraphHistory` stores a full copy after each recorded step (Decision 0009).
 
 ### 5.3 Control loop
 
@@ -336,13 +313,13 @@ Aligned with [`docs/TODO.md`](TODO.md). Each phase ends with a verifiable gate.
 
 | Phase | Deliverable | Gate |
 |-------|-------------|------|
-| **0. Docs system** | ARCHITECTURE, DECISIONS, OPEN_QUESTIONS, TODO | You are here |
-| **1. Skeleton package** | `atg/` types + graph + tests for DAG ops | `pytest` green, no LLM |
-| **2. Executor** | ready-queue + parallel mock tools | parallel branch test passes |
-| **3. Planner (stub→LLM)** | recursive compile with mock structured output | multi-level graph from fixture |
-| **4. Thought + repair** | pre-check stub + minimal repair with freeze | failure injection test |
-| **5. Real LLM path** | LiteLLM/Ollama example | documented example runs |
-| **6. Integrations & polish** | DSPy/LangGraph extras, metrics, packaging | optional extras install |
+| **0. Docs system** | ARCHITECTURE, DECISIONS, OPEN_QUESTIONS, TODO | Done |
+| **1. Skeleton package** | `src/atg/` types, graph, history, tools, validation, tests | Done — `uv run pytest`, no LLM |
+| **2. Executor** | ready-queue loop + parallel mock tools (semantics: Decision 0011) | Done — overlap test, `max_parallel >= 2` |
+| **3. Planner** | mock `Decomposition` compile | Done — Decision 0012 |
+| **4. Thought + repair** | rules, optional judge, LCA freeze | Done — Decisions 0013, 0014 |
+| **5. Local model example** | `examples/toy_parallel.py` | Done offline; live tag Decision 0017 |
+| **6. Integrations and polish** | metrics, JSON checkpoint, one-way adapters, CI, MIT license | Done |
 
 ### PR-sized slices (suggested)
 
@@ -372,8 +349,18 @@ Binding detail lives in [`docs/DECISIONS.md`](DECISIONS.md).
 | **0008** | Packaging: `src/atg/`, uv + pyproject, optional extras |
 | **0009** | Graph history: full immutable snapshots each compile/repair step |
 | **0010** | Parallel runner: pluggable port, ThreadPoolExecutor default |
+| **0011** | Dynamic ready-queue; fixed node status transitions |
+| **0012** | Planner emits a Pydantic `Decomposition` |
+| **0013** | Structural thought experiment; judge is opt-in |
+| **0014** | LCA repair region; frozen nodes are not reset |
+| **0015** | JSON checkpoint; history stays in memory at runtime |
+| **0016** | One-way LangGraph and DSPy callables |
+| **0017** | Default local tag `llama3.1:8b` via `ATG_MODEL` |
+| **0018** | Paper benchmarks stay deferred |
+| **0019** | Software license is MIT |
+| **0020** | Third-party ATG readings: three behaviors adopted, the rest skipped |
 
-Open architectural choices (ready-queue detail, planner prompts, repair LCA, license, etc.) stay in [`docs/OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md) until promoted to ADR.
+The remaining open question is repair escalation (OQ-0016). The live model check is a remeasure of Decision 0017, parked while other jobs use Ollama. History of closed questions is in [`docs/OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md).
 
 ---
 

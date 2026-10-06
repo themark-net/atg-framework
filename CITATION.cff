@@ -11,7 +11,7 @@ abstract: >-
   Prototype implementation of Atomic Task Graph (ATG) concepts for robust,
   efficient LLM-based agents. Independent open-source work inspired by the
   research paper; not an official release from the paper authors.
-license: TBD
+license: MIT
 repository-code: https://github.com/themark-net/atg-framework
 url: https://github.com/themark-net/atg-framework
 keywords:

@@ -43,7 +43,7 @@ BibTeX:
 
 This repository serves as the dedicated development and testing space for ATG ideas. It is linked as an untested prototype from the [local-llm-dev-tools catalog](https://github.com/themark-net/local-llm-dev-tools) (see the ATG entry in TOOLS.md for analysis, feasibility scoring, and distilled methodology).
 
-**Current Status**: Initial skeleton / proof-of-concept. Untested implementation focused on core reusable components with emphasis on built-in testing and validation. Not production-ready — use for experimentation, rapid iteration, and validating concepts from the paper in a local LLM context (Ollama, LiteLLM, DSPy, LangGraph, etc.). Active space to deploy and test these ideas.
+**Current status:** The MVP loop is implemented and covered by unit tests: compile a task to a DAG, run independent tools together, and repair a failed region without re-running frozen nodes. An offline example prints a two-branch sum. A live Ollama path reads `ATG_MODEL` (default `llama3.1:8b`). On 2026-10-05 that live path exited 1 for `llama3.1:8b` (180s timeout), `qwen2.5:14b` (an edge named the parent id), and `gemma4:latest` (the sink omitted `value`). The compiler now drops edges that name an id outside the child set. Re-run `--live` when `ollama ps` is empty; the numbers are on Decision 0017. Not production-ready. The software license is MIT (Decision 0019).
 
 ## Core Goals
 - Reusable Python framework centered on explicit DAG-based task planning and execution.
@@ -53,16 +53,18 @@ This repository serves as the dedicated development and testing space for ATG id
 - Seamless integration points with popular local agent stacks.
 - Focus on reliability and efficiency for complex agentic workflows, especially on smaller models and consumer hardware.
 
-## High-Level Architecture (Initial Sketch - Subject to Refinement)
-- `atg.graph`: Core DAG representation, dependency resolution, history/evolution tracking (NetworkX? custom? LangGraph integration?).
-- `atg.planner`: Recursive decomposition of tasks into atomic nodes with explicit I/O dependencies.
-- `atg.executor`: Parallel execution engine respecting dependencies; ready-node scheduling.
-- `atg.repair`: Failure localization via graph history and minimal subgraph repair.
-- `atg.validation`: Graph integrity checks, plan executability, result validators.
-- `atg.testing`: Test harness (mock LLMs, property-based tests, benchmark runners), metrics collection.
-- `atg.integrations`: Adapters for DSPy signatures/modules, LangGraph state graphs, tool calling schemas, memory backends (e.g., MCP-like persistent storage).
-- `examples/`: Toy tasks and end-to-end demos.
-- `tests/`: Comprehensive test suite.
+## High-Level Architecture
+
+Binding detail is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/DECISIONS.md`](docs/DECISIONS.md).
+
+- `atg.types` / `atg.graph`: stdlib DAG and frozen Pydantic nodes (Decisions 0005, 0006, 0011). No NetworkX in core.
+- `atg.history`: full graph snapshots (Decision 0009).
+- `atg.tools`: OpenAI-style JSON schema plus a same-name callable (Decision 0007).
+- `atg.validation`: acyclicity, `$ref` checks, and parent/subgraph interface checks.
+- `atg.planner`, `atg.executor`, `atg.thought`, `atg.repair`: the compile / run / check / repair loop (Decisions 0011–0014).
+- `atg.integrations`: one-way callables for LangGraph and DSPy. They do not import those packages (Decision 0016).
+- `examples/toy_parallel.py`: offline by default. `--live` calls Ollama.
+- `tests/`: unit tests do not call a model. The integration mark is off unless `ATG_RUN_INTEGRATION=1`.
 
 ## Documentation system
 
@@ -77,17 +79,21 @@ This repository serves as the dedicated development and testing space for ATG id
 
 Workflow: **ARCHITECTURE** → park unknowns in **OPEN_QUESTIONS** → bind choices in **DECISIONS** → execute via **TODO**.
 
-## Quick Start (Placeholder)
+## Quick Start
+
 ```bash
-# Once packaged
-pip install -e .
-python -m atg.examples.simple_multi_step_task
+uv sync --extra dev
+uv run pytest
+uv run python examples/toy_parallel.py
 ```
 
-Run tests:
+The offline example compiles a two-branch sum with a scripted model and prints `value=25`. A local Ollama run uses `ATG_MODEL` (default `llama3.1:8b`, Decision 0017):
+
 ```bash
-pytest
+uv run python examples/toy_parallel.py --live
 ```
+
+`pip install -e .` also works. The optional `llm` extra installs LiteLLM. The software license is MIT.
 
 ## Integration Notes
 Designed to complement and extend existing setups like DSPy + LiteLLM for orchestration, Ollama for local inference, and custom MCP-style code memory. The explicit graph structure aligns naturally with persistent memory of verified subtasks and dependencies.
@@ -101,6 +107,6 @@ Designed to complement and extend existing setups like DSPy + LiteLLM for orches
 - Analysis & Tracking Repo: https://github.com/themark-net/local-llm-dev-tools (ATG section — feasibility ~75/100, distilled method, implementation guidance)
 - Related Concepts: Your gom-jobbar-grok4 style agents, LangGraph workflows, etc.
 
-**License**: To be determined (MIT or Apache-2.0 recommended for broad reusability). Software license is separate from the paper’s arXiv license.
+**License**: MIT (`LICENSE`). The software license is separate from the paper’s arXiv license.
 
 Contributions, experiments, and feedback welcome. This is our sandbox to turn the paper's promising architecture into tested, reusable code — with correct credit to Zhang et al. (2026).

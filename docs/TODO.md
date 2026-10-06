@@ -9,16 +9,41 @@
 
 ## Current focus
 
-1. **All Phase-1 P0 OQs closed.** Optional next interactive: OQ-0007 (ready-queue, P1) or start Phase 1 code.  
-2. Implement Phase 1 skeleton: `src/atg` (0008) + graph (0005) + types (0006) + tools (0007) + history (0009) + tests.  
+1. MVP loop is in `src/atg/`. `uv run pytest -q -m "not integration"` → 30 passed, 1 deselected.  
+2. Offline demo: `uv run python examples/toy_parallel.py`.  
+3. Live remeasure is waiting while other jobs use Ollama. Decision 0017 records the 2026-10-05 failures. When `ollama ps` is empty, run `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only`. If that exits 0, supersede 0017.  
+4. The software license is MIT (Decision 0019). The 2026-10-05 gap check is Decision 0020.  
+5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen.
 
-**Recently closed:** … OQ-0002→0009; OQ-0006→**0010**.
+**Recently closed:** OQ-0011→0019. Earlier: OQ-0005→0012, OQ-0008→0013, OQ-0009→0014, OQ-0013→0016, OQ-0014→0015, OQ-0015→0017. OQ-0012 → wont-do (Decision 0018). OQ-0007→0011.
 
 ---
 
-## Session checkpoint — resume here (2026-07-11)
+## Session checkpoint — resume here (2026-10-05)
 
-**State:** Design/docs phase complete for MVP P0 decisions. **No application code yet** (`src/atg/` not created). Working tree at this checkpoint is documentation + process only.
+**State:** Phases 1–6 are in tree. Decisions **0012–0020** are accepted. `uv run pytest -m "not integration"` is green. OQ-0016 (repair escalation) is the remaining open question.
+
+### Done this session
+
+| Area | Outcome |
+|------|---------|
+| Runtime | Planner, executor, structural thought, localized repair, JSON history, one-way adapters |
+| Decisions | 0012–0019. License is MIT |
+| Live | Three local tags failed (Decision 0017 measurement). Parent-id edges are dropped. A 14B retry was cancelled while `gpt-oss:120b` was loading |
+
+### Next session
+
+1. When `ollama ps` is empty, run `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only`.  
+2. If that exits 0 with parallel ≥ 2 and sink value 25, supersede Decision 0017 and set `DEFAULT_MODEL` to `qwen2.5:14b`.  
+3. Do not load a model for the Decision 0017 remeasure while another bench holds Ollama.
+
+---
+
+## Historical checkpoint — design only (2026-07-11)
+
+Superseded by the checkpoint above. Decisions listed here still bind. **Do not treat “no application code” as current.**
+
+**State at that date:** Design/docs phase complete for MVP P0 decisions. Application code had not been created yet.
 
 ### Done this session
 
@@ -44,28 +69,7 @@
 
 Also: 0001 docs system, 0002 custom core (not LangGraph-first), 0003 model-agnostic LLM, 0004 synthetic MVP not paper benchmarks.
 
-### Next session — recommended order
-
-1. Read `AGENTS.md` + `docs/ARCHITECTURE.md` §5 + Decisions **0005–0010**.  
-2. **Code Phase 1 gate:** `pytest` green without LLM:  
-   - `pyproject.toml` + `src/atg/` skeleton (0008)  
-   - `types` (0006) + `graph` (0005) + `history` (0009) + `tools` (0007) + `validation`  
-   - unit tests: topo, cycle, freeze, snapshot, tool registry  
-3. Optional chat OQ before Phase 2: **OQ-0007** (ready-queue vs static levels).  
-4. Process: keep asking remaining OQs **in chat** (user preference); promote answers to ADR.
-
-### Still open (not blocking Phase 1 skeleton)
-
-P1: OQ-0005 planner structured output · OQ-0007 ready-queue · OQ-0008 thought experiment · OQ-0009 repair LCA  
-P2+: license, adapters, persistence, example model tags, paper benchmarks  
-
-### How agents should resume
-
-```
-1. git pull
-2. Read AGENTS.md, docs/TODO.md (this checkpoint), docs/DECISIONS.md (0005–0010)
-3. Start Phase 1 code unless user asks for more OQ Q&A
-```
+The July resume list (start Phase 1, discuss OQ-0007) is done. Follow the 2026-10-05 checkpoint.
 
 ---
 
@@ -92,12 +96,12 @@ P2+: license, adapters, persistence, example model tags, paper benchmarks
 | [x] | Decide graph representation | **Decision 0005** (was OQ-0001) |
 | [x] | Modeling standard for node/result types | **Decision 0006** (was OQ-0003; fields may evolve in PRs) |
 | [x] | Tool registry / atomic definition | **Decision 0007** (was OQ-0004) |
-| [ ] | `pyproject.toml` + `src/atg` package skeleton | Decision 0008 |
-| [ ] | `atg.types` + `atg.graph` (DAG ops, freeze marks) | ARCH §5.1–5.2 |
-| [ ] | `atg.history` full snapshot list | **Decision 0009** |
-| [ ] | `atg.validation` acyclicity + basic interface checks | ARCH §5.5 |
-| [ ] | Unit tests for graph/history/validation | ARCH §3.3 |
-| [ ] | Package `__init__` attribution blurb | `ATTRIBUTION.md` |
+| [x] | `pyproject.toml` + `src/atg` package skeleton | Decision 0008 |
+| [x] | `atg.types` + `atg.graph` (DAG ops, freeze marks) | ARCH §5.1–5.2 |
+| [x] | `atg.history` full snapshot list | **Decision 0009** |
+| [x] | `atg.validation` acyclicity + basic interface checks | ARCH §5.5 |
+| [x] | Unit tests for graph/history/validation | ARCH §3.3 |
+| [x] | Package `__init__` attribution blurb | `ATTRIBUTION.md` |
 
 ---
 
@@ -108,9 +112,9 @@ P2+: license, adapters, persistence, example model tags, paper benchmarks
 | Done | Item | Refs |
 |------|------|------|
 | [x] | Choose parallel runtime default | **Decision 0010** (was OQ-0006): pluggable, threads default |
-| [ ] | Ready-queue executor | [OQ-0007](OPEN_QUESTIONS.md#oq-0007-ready-queue-vs-static-topo-only), paper §4.2 |
-| [ ] | Node state transitions + metrics hooks | ARCH §5.6 |
-| [ ] | Tests: parallel width ≥ 2; order constraints | Decision 0004 |
+| [x] | Ready-queue executor loop (semantics decided; `ready_ids` exists) | **Decision 0011**, paper §4.2 |
+| [x] | Node state transitions + metrics hooks | ARCH §5.6, `atg.metrics` |
+| [x] | Tests: parallel width ≥ 2; order constraints | Decision 0004 |
 
 ---
 
@@ -120,10 +124,10 @@ P2+: license, adapters, persistence, example model tags, paper benchmarks
 
 | Done | Item | Refs |
 |------|------|------|
-| [ ] | `LLMClient` protocol + mock | Decision 0003 |
-| [ ] | Recursive compile loop + history snapshots | paper §4.1, OQ-0002 |
-| [ ] | Structured decomposition path | [OQ-0005](OPEN_QUESTIONS.md#oq-0005-decomposition--structured-output-strategy) |
-| [ ] | Fixture-based planner tests (no network) | ARCH §5.5 |
+| [x] | `LLMClient` protocol + mock | Decision 0003, `atg.llm` |
+| [x] | Recursive compile loop + history snapshots | paper §4.1, Decision 0009 |
+| [x] | Structured decomposition path | **Decision 0012** |
+| [x] | Fixture-based planner tests (no network) | ARCH §5.5 |
 
 ---
 
@@ -133,10 +137,10 @@ P2+: license, adapters, persistence, example model tags, paper benchmarks
 
 | Done | Item | Refs |
 |------|------|------|
-| [ ] | Structural thought/pre-check | [OQ-0008](OPEN_QUESTIONS.md#oq-0008-failure-detection--thought-experiment) |
-| [ ] | Failure localization + minimal repair | [OQ-0009](OPEN_QUESTIONS.md#oq-0009-repair-localization-algorithm), paper §4.3 |
-| [ ] | Freeze validated regions | Decision 0004 metrics story |
-| [ ] | Failure-injection tests | ARCH §3.3 |
+| [x] | Structural thought/pre-check | **Decision 0013** |
+| [x] | Failure localization + minimal repair | **Decision 0014**, paper §4.3 |
+| [x] | Freeze validated regions | Decision 0004 metrics story |
+| [x] | Failure-injection tests | ARCH §3.3 |
 
 ---
 
@@ -146,10 +150,11 @@ P2+: license, adapters, persistence, example model tags, paper benchmarks
 
 | Done | Item | Refs |
 |------|------|------|
-| [ ] | LiteLLM-backed `LLMClient` | Decision 0003 |
-| [ ] | Example: multi-step toy task with ≥1 parallel branch | ARCH §3.3 |
-| [ ] | Example model via `ATG_MODEL` | [OQ-0015](OPEN_QUESTIONS.md#oq-0015-default-example-model-tags) |
-| [ ] | Optional `@pytest.mark.integration` | ARCH §5.5 |
+| [x] | LiteLLM-backed `LLMClient` (optional extra `[llm]`) plus stdlib `OllamaClient` | Decision 0003, 0017 |
+| [x] | Example: multi-step toy task with ≥1 parallel branch | `examples/toy_parallel.py` |
+| [x] | Example model via `ATG_MODEL` | **Decision 0017** |
+| [x] | Optional `@pytest.mark.integration` | skipped unless `ATG_RUN_INTEGRATION=1` |
+| [ ] | Live toy exits 0 on one local instruct tag | Decision 0017 measurement. Re-run when `ollama ps` is empty |
 
 ---
 
@@ -159,12 +164,12 @@ P2+: license, adapters, persistence, example model tags, paper benchmarks
 
 | Done | Item | Refs |
 |------|------|------|
-| [ ] | Metrics export (steps, repairs, frozen reuse) | paper-aligned metrics |
-| [ ] | DSPy / LangGraph thin adapters | [OQ-0013](OPEN_QUESTIONS.md#oq-0013-dspy--langgraph-adapter-depth), Decision 0002 |
-| [ ] | Persistence checkpoint (if needed) | [OQ-0014](OPEN_QUESTIONS.md#oq-0014-persistence--memory-backend) |
-| [ ] | License file | [OQ-0011](OPEN_QUESTIONS.md#oq-0011-license) |
-| [ ] | CI: pytest on PR | — |
-| [ ] | Optional paper env adapters | [OQ-0012](OPEN_QUESTIONS.md#oq-0012-paper-benchmark-adapters), Decision 0004 |
+| [x] | Metrics export (steps, repairs, frozen reuse) | `atg.metrics.Metrics` |
+| [x] | DSPy / LangGraph thin adapters | **Decision 0016** |
+| [x] | Persistence checkpoint (JSON) | **Decision 0015** |
+| [x] | License file | **Decision 0019** — MIT |
+| [x] | CI: pytest on PR | `.github/workflows/pytest.yml` |
+| [x] | Paper env adapters stayed deferred | **Decision 0018** |
 
 ---
 

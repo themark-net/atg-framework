@@ -18,17 +18,18 @@
 | [OQ-0002](#oq-0002-history--evolution-representation) | P0 | promoted-to-adr | History / evolution representation | — | Decision 0009 |
 | [OQ-0003](#oq-0003-node--result-data-model) | P0 | promoted-to-adr | Node & result data model | — | Decision 0006 |
 | [OQ-0004](#oq-0004-atomic-task--tool-definition) | P0 | promoted-to-adr | Atomic task / tool definition | — | Decision 0007 |
-| [OQ-0005](#oq-0005-decomposition--structured-output-strategy) | P1 | open | Decomposition & structured output | Planner quality | Decision 0006 |
+| [OQ-0005](#oq-0005-decomposition--structured-output-strategy) | P1 | promoted-to-adr | Decomposition & structured output | — | Decision 0012 |
 | [OQ-0006](#oq-0006-parallel-execution-runtime) | P0 | promoted-to-adr | Parallel execution runtime | — | Decision 0010 |
-| [OQ-0007](#oq-0007-ready-queue-vs-static-topo-only) | P1 | open | Ready-queue vs static topo only | Scheduler design | paper §4.2 |
-| [OQ-0008](#oq-0008-failure-detection--thought-experiment) | P1 | open | Failure detection & thought experiment | Phase 4 | paper §4.2–4.3 |
-| [OQ-0009](#oq-0009-repair-localization-algorithm) | P1 | open | Repair localization algorithm | Phase 4 | paper §4.3 |
+| [OQ-0007](#oq-0007-ready-queue-vs-static-topo-only) | P1 | promoted-to-adr | Ready-queue vs static topo only | — | Decision 0011 |
+| [OQ-0008](#oq-0008-failure-detection--thought-experiment) | P1 | promoted-to-adr | Failure detection & thought experiment | — | Decision 0013 |
+| [OQ-0009](#oq-0009-repair-localization-algorithm) | P1 | promoted-to-adr | Repair localization algorithm | — | Decision 0014 |
 | [OQ-0010](#oq-0010-project-packaging--layout) | P0 | promoted-to-adr | Project packaging & layout | — | Decision 0008 |
-| [OQ-0011](#oq-0011-license) | P2 | open | License | Distribution | README |
-| [OQ-0012](#oq-0012-paper-benchmark-adapters) | P3 | open | Paper benchmark adapters | Parity experiments | Decision 0004 |
-| [OQ-0013](#oq-0013-dspy--langgraph-adapter-depth) | P2 | open | DSPy / LangGraph adapter depth | Phase 6 | Decision 0002 |
-| [OQ-0014](#oq-0014-persistence--memory-backend) | P2 | open | Persistence / memory backend | Long runs, reuse | ARCH §5 |
-| [OQ-0015](#oq-0015-default-example-model-tags) | P2 | open | Default example model tags | Examples docs | Decision 0003, ARCH §4 |
+| [OQ-0011](#oq-0011-license) | P2 | promoted-to-adr | License | — | Decision 0019 |
+| [OQ-0012](#oq-0012-paper-benchmark-adapters) | P3 | wont-do | Paper benchmark adapters | — | Decision 0018 |
+| [OQ-0013](#oq-0013-dspy--langgraph-adapter-depth) | P2 | promoted-to-adr | DSPy / LangGraph adapter depth | — | Decision 0016 |
+| [OQ-0014](#oq-0014-persistence--memory-backend) | P2 | promoted-to-adr | Persistence / memory backend | — | Decision 0015 |
+| [OQ-0015](#oq-0015-default-example-model-tags) | P2 | promoted-to-adr | Default example model tags | — | Decision 0017 |
+| [OQ-0016](#oq-0016-repair-escalation-policy) | P2 | open | Repair escalation policy | Repeated failures | Decision 0014 |
 
 ---
 
@@ -277,13 +278,13 @@ You can say “R1” and then override individual letters.
 ### OQ-0005: Decomposition & structured output strategy
 
 - **Priority:** P1  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Real planner quality  
-- **Blocked-by:** OQ-0004 (atomic/tool contracts), Decision 0003  
-- **Related-ADR:** Decision 0003; Decision 0006 (Pydantic schemas available)  
-- **Related-code:** `atg/planner.py` (planned)  
+- **Updated:** 2026-10-05  
+- **Blocks:** — (resolved)  
+- **Blocked-by:** OQ-0004 (resolved), Decision 0003  
+- **Related-ADR:** **Decision 0012**  
+- **Related-code:** `src/atg/planner.py`, `src/atg/llm.py`  
 - **Feature/runbook:** phase-3-planner  
 
 **Question:** How does the LLM emit subgraphs (JSON schema, tool calls, free text+parse)? Recursive depth limits? (Depth may also be set under OQ-0004 D.)
@@ -298,7 +299,7 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** Promoted to **Decision 0012**. Core asks for a Pydantic `Decomposition` via `complete_structured`. Depth cap stays 6 (Decision 0007). Revisit if the live toy script fails schema validation on every installed instruct model and a tool-call format succeeds on the same prompt. DSPy stays an adapter, not the compiler.
 
 ---
 
@@ -335,13 +336,13 @@ You can say “R1” and then override individual letters.
 ### OQ-0007: Ready-queue vs static topo only
 
 - **Priority:** P1  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Scheduler sophistication  
-- **Blocked-by:** OQ-0006  
-- **Related-ADR:** —  
-- **Related-code:** `atg/executor.py`  
+- **Updated:** 2026-10-05  
+- **Blocks:** — (resolved)  
+- **Blocked-by:** OQ-0006 (resolved by Decision 0010)  
+- **Related-ADR:** **Decision 0011**  
+- **Related-code:** `src/atg/graph.py` (`ready_ids`, `transition`)  
 - **Feature/runbook:** phase-2-executor  
 
 **Question:** Dynamic ready-queue as nodes complete, or precomputed levels only?
@@ -352,20 +353,20 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** Promoted to **Decision 0011**. Dynamic ready-queue; status chain `pending → ready → running → done → frozen`, plus `running → failed`; a failure blocks descendants and leaves siblings eligible. The executor loop is still Phase 2. Paper §4.2 was specific enough. Thought-experiment policy (OQ-0008) and repair reset (OQ-0009) were not decided.
 
 ---
 
 ### OQ-0008: Failure detection & thought experiment
 
 - **Priority:** P1  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Phase 4 robustness  
-- **Blocked-by:** OQ-0005  
-- **Related-ADR:** —  
-- **Related-code:** `atg/thought.py`, `atg/repair.py`  
+- **Updated:** 2026-10-05  
+- **Blocks:** — (resolved)  
+- **Blocked-by:** OQ-0005 (resolved)  
+- **Related-ADR:** **Decision 0013**  
+- **Related-code:** `src/atg/thought.py`  
 - **Feature/runbook:** phase-4-repair  
 
 **Question:** Thought experiment = rules-only, LLM judge, or hybrid? Runtime failure = exceptions only or also validators?
@@ -374,20 +375,20 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** Promoted to **Decision 0013**. Structural checks always run. `ATG_JUDGE=1` adds one judge call after the rules pass. Unit comparison: a structurally valid plan stays ok with the judge off, and the same plan is rejected when a scripted judge returns `ok=false`. Revisit when a live run passes the rules and then fails for a reason other than a tool exception: turn the judge on for that task and compare `judge_disagreements`. Runtime tool failures stay exceptions (Decision 0011), not a second validator framework.
 
 ---
 
 ### OQ-0009: Repair localization algorithm
 
 - **Priority:** P1  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Faithful §4.3 behavior  
-- **Blocked-by:** OQ-0002  
-- **Related-ADR:** —  
-- **Related-code:** `atg/repair.py`  
+- **Updated:** 2026-10-05  
+- **Blocks:** — (resolved)  
+- **Blocked-by:** OQ-0002 (resolved)  
+- **Related-ADR:** **Decision 0014**  
+- **Related-code:** `src/atg/repair.py`  
 - **Feature/runbook:** phase-4-repair  
 
 **Question:** Exact LCA-over-history algorithm and freeze semantics when multiple failures occur?
@@ -398,7 +399,7 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** Promoted to **Decision 0014**. Lineage walks `parent_id`, then older snapshots. The lowest common ancestor is the common id closest to the failed nodes. The repair region is every live node under that ancestor, plus downstream nodes. Successes outside the region are frozen. `transition` still refuses `failed → pending`; `reset_for_repair` is the only reset and it refuses frozen nodes. Revisit if a fixture shows the LCA region re-executes a node the test required to stay frozen, or if two failures share no ancestor and the union of their cones is too large: the alternative is “repair only the failed node plus its descendants,” which is already what a missing ancestor does.
 
 ---
 
@@ -427,12 +428,12 @@ You can say “R1” and then override individual letters.
 ### OQ-0011: License
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Clear redistribution  
+- **Updated:** 2026-10-05  
+- **Blocks:** — (resolved)  
 - **Blocked-by:** —  
-- **Related-ADR:** —  
+- **Related-ADR:** **Decision 0019**  
 - **Related-code:** `LICENSE`  
 - **Feature/runbook:** packaging  
 
@@ -442,20 +443,21 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** Left open until the maintainer chose.  
+- **2026-10-05:** Maintainer chose MIT. Promoted to **Decision 0019**. `LICENSE` is the grant. Paper citation stays in `docs/ATTRIBUTION.md` and is separate from this software license.
 
 ---
 
 ### OQ-0012: Paper benchmark adapters
 
 - **Priority:** P3  
-- **Status:** open  
+- **Status:** wont-do  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Scientific parity runs  
+- **Updated:** 2026-10-05  
+- **Blocks:** —  
 - **Blocked-by:** Decision 0004 (deferred by design)  
-- **Related-ADR:** Decision 0004  
-- **Related-code:** `atg/integrations/benchmarks/` (future)  
+- **Related-ADR:** Decision 0004, **Decision 0018**  
+- **Related-code:** none (no benchmark package)  
 - **Feature/runbook:** phase-optional-benchmarks  
 
 **Question:** Which paper envs first, if any? ALFWorld vs lighter synthetic household tasks?
@@ -464,20 +466,20 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** **Decision 0018**. Still deferred. Repair metrics now exist on synthetic tasks (`waves`, `repairs`, `nodes_frozen_reused`). Revisit only when someone names one paper environment to port. Do not start ALFWorld, WebShop, or ScienceWorld before that.
 
 ---
 
 ### OQ-0013: DSPy / LangGraph adapter depth
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Phase 6 polish  
-- **Blocked-by:** Decision 0002, working core  
-- **Related-ADR:** Decision 0002  
-- **Related-code:** `atg/integrations/`  
+- **Updated:** 2026-10-05  
+- **Blocks:** — (resolved)  
+- **Blocked-by:** —  
+- **Related-ADR:** Decision 0002, **Decision 0016**  
+- **Related-code:** `src/atg/integrations/`  
 - **Feature/runbook:** phase-6  
 
 **Question:** Thin wrappers vs bidirectional sync of state?
@@ -486,20 +488,20 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** Promoted to **Decision 0016**. `as_langgraph_node` and `as_dspy_forward` return plain callables. They do not import either framework. Revisit bidirectional checkpoint sync only if a caller must pause inside an ATG run and resume from the other framework’s saver.
 
 ---
 
 ### OQ-0014: Persistence / memory backend
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Multi-session reuse  
-- **Blocked-by:** OQ-0002  
-- **Related-ADR:** —  
-- **Related-code:** future  
+- **Updated:** 2026-10-05  
+- **Blocks:** — (resolved)  
+- **Blocked-by:** OQ-0002 (resolved)  
+- **Related-ADR:** **Decision 0015**  
+- **Related-code:** `src/atg/persist.py`  
 - **Feature/runbook:** phase-6  
 
 **Question:** In-memory only for MVP (yes) then JSON files vs SQLite vs vector store for semantic reuse?
@@ -508,20 +510,20 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** Promoted to **Decision 0015**. Runtime history stays in memory. `save_history` / `load_history` write one JSON list of snapshots. Revisit SQLite when a checkpoint file is too large to load whole. Revisit a vector store only after a concrete similarity-reuse task exists.
 
 ---
 
 ### OQ-0015: Default example model tags
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** promoted-to-adr  
 - **Created:** 2026-07-11  
-- **Updated:** 2026-07-11  
-- **Blocks:** Copy-paste examples  
-- **Blocked-by:** Decision 0003  
-- **Related-ADR:** Decision 0003  
-- **Related-code:** `examples/`  
+- **Updated:** 2026-10-05  
+- **Blocks:** — (resolved)  
+- **Blocked-by:** —  
+- **Related-ADR:** Decision 0003, **Decision 0017**  
+- **Related-code:** `examples/toy_parallel.py`, `src/atg/llm.py`  
 - **Feature/runbook:** phase-5  
 
 **Question:** Which Ollama/LiteLLM model string do examples document in 2026?
@@ -532,7 +534,39 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- (none yet)
+- **2026-10-05:** Promoted to **Decision 0017**. Default tag `llama3.1:8b` via `ATG_MODEL`. Fallback order if that tag cannot emit a valid `Decomposition`: `qwen2.5:14b`, then `gemma4:latest`. Coder-only tags and `deepseek-v4-flash:cloud` are not defaults.  
+- **2026-10-05 measurement:** `--live` exited 1 for all three tags (`llama3.1:8b` timeout at 180s, `qwen2.5:14b` parent-id edge, `gemma4:latest` missing sink output `value`). The default was not swapped. Parent-id edges are now dropped in the compiler. Re-run `examples/toy_parallel.py --live --model qwen2.5:14b --only` when `ollama ps` is empty. Details and the supersede rule are on Decision 0017.
+
+---
+
+### OQ-0016: Repair escalation policy
+
+- **Priority:** P2  
+- **Status:** open  
+- **Created:** 2026-09-20  
+- **Updated:** 2026-10-05  
+- **Blocks:** —  
+- **Blocked-by:** —  
+- **Related-ADR:** Decision 0014  
+- **Related-code:** `src/atg/repair.py`, `src/atg/run.py`  
+- **Feature/runbook:** phase-4  
+
+**Question:** When the same region fails again, should repair widen to the parent, or retry that region until `max_repairs`?
+
+**Context:** Brought across from `origin/cursor/first-pass-atg-loop-b0e3`, where it was left open. That branch retried a region once, then widened to the parent (`escalate_after=1`, `max_repairs=3`). Paper §4.3 names the lowest common historical ancestor and does not say what a second failure of that region does. Decision 0014 retries the same region and stops at `max_repairs` (default 2). It does not widen.
+
+**Options:**
+
+1. Keep Decision 0014: same region, then stop.  
+2. Widen one parent level after the region has failed once, and cap the total repairs.  
+3. Count failures per tool name.  
+4. Ask the model to choose the region.
+
+**Recommendation:** Keep (1) until a live run shows the same region failing twice for a reason a wider parent would fix.
+
+**Resolution notes:**
+
+- **2026-10-05:** Recorded from the remote first pass. Not implemented. The `$parent` decomposition conventions in that branch’s OQ-0017 were not copied. Decision 0012 already fixes literals and `$ref`.
 
 ---
 

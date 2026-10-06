@@ -102,13 +102,15 @@ When adopting a **new** paper, library algorithm, or substantial external design
 | Key / ID | Work | Used for | Status |
 |----------|------|----------|--------|
 | `zhang2026atg` | Zhang et al., ATG, arXiv:2607.01942 | Core architecture | **Primary** |
+| RegardV/ATG-looping | Third-party Claude skill and `algl.py` ledger, MIT, 2026 | Gap check only. Not official paper code. Nothing vendored. Decision 0020 | Consulted |
+| SnackOnAI, 2026-07-15 | Blog snippets reconstructed from §§4.1–4.3 | Gap check only. Not a repository and not official paper code. Decision 0020 | Consulted |
 
 *(Add rows as dependencies accumulate.)*
 
 ## Relationship to third-party software licenses
 
 - **Paper attribution ≠ code license.** Citing Zhang et al. does not grant rights to copy proprietary or non-open code.
-- This repository’s software license is declared in `LICENSE` / README (TBD as of policy creation).
+- This repository’s software license is MIT (`LICENSE`, Decision 0019).
 - Dependencies keep their own licenses; list them via normal packaging (`pyproject.toml`, NOTICE if needed).
 - Prefer clean-room reimplementation of *ideas* over translating paper pseudocode line-for-line when ambiguity exists; still cite the idea source.
 
