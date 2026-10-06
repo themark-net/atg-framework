@@ -831,6 +831,32 @@ Rejected alternatives:
 
 ---
 
+## Decision 0024: A malformed decomposition is a compile error (2026-10-06)
+
+**Status:** Accepted
+
+**Context:** `qwen3.6:35b` returned a decomposition whose input was `{"$ref": "add_step.value"}`. `TaskNode` rejects a ref that is not `node_id.outputs.field`. That `ValidationError` left `compile_task` and aborted the live PoC before any report was written. No tool had run.
+
+**Decision:** Building a `TaskNode` from a decomposition catches `ValidationError` and raises `CompileError`. The PoC records that task as `plan_ok` false and `success` false, then runs the remaining tasks. The shorthand is not rewritten into `.outputs.`.
+
+**Rationale:** Typed validation already stopped the bad plan before execution. The missing piece was a compile error the caller can record. A sweep that dies on the first bad plan measures nothing.
+
+Rejected alternatives:
+
+1. **Rewrite `node.field` into `node.outputs.field`** — hides the invalid plan and inflates the valid-plan rate.  
+2. **Abort the whole suite** — one bad task erases the other eleven.  
+3. **Repair the graph when compilation never built one** — Decision 0014 repairs a region of an existing graph. There is no region yet.
+
+**Consequences:**
+
+- `compile_task` and `run_task` raise `CompileError` for a short `$ref`. Tools are not called.  
+- Callers that already catch `CompileError` keep going. `ValidationError` is still caught at the PoC boundary so a later escape does not abort a live sweep.  
+- This does not add a second model retry on the Ollama client.
+
+**References:** Decisions 0006, 0012, 0014; `src/atg/planner.py`; `examples/poc_suite.py`.
+
+---
+
 ## How to add a decision
 
 1. Assign next ID (`NNNN` = max + 1, never reuse).  

@@ -147,6 +147,42 @@ def test_dependent_tool_waits_and_failure_blocks_descendant():
     assert "nope" in (graph.get("b").error or "")
 
 
+def test_short_ref_is_a_compile_error_and_tools_do_not_run():
+    registry = ToolRegistry()
+    seen: list[tuple[int, int]] = []
+
+    def add(a: int, b: int) -> dict:
+        seen.append((a, b))
+        return {"value": a + b}
+
+    registry.register(add, name="add", description="Add two integers")
+    root = TaskNode(id="job", name="job", declared_outputs=["value"])
+    spec = Decomposition(
+        nodes=[
+            ChildNode(
+                id="add_step",
+                name="add",
+                tool_name="add",
+                inputs={"a": 1, "b": 2},
+                declared_outputs=["value"],
+                refine=False,
+            ),
+            ChildNode(
+                id="sink",
+                name="sink",
+                tool_name="add",
+                inputs={"a": {"$ref": "add_step.value"}, "b": 4},
+                declared_outputs=["value"],
+                refine=False,
+            ),
+        ],
+        edges=[EdgeSpec(src="add_step", dst="sink")],
+    )
+    with pytest.raises(CompileError, match="sink"):
+        compile_task(root, registry, MockLLM([spec]))
+    assert seen == []
+
+
 def test_edges_that_name_the_parent_are_ignored():
     registry = _registry()
     root = TaskNode(id="job", name="job", declared_outputs=["value"])

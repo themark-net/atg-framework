@@ -44,3 +44,48 @@ def test_offline_poc_suite():
     )
     assert "localized" in markdown and "global_replan" in markdown
     assert "sequential" in markdown
+
+
+def test_one_bad_ref_fails_that_task_and_the_next_task_still_runs():
+    suite = _load()
+    bad = suite.Decomposition(
+        nodes=[
+            suite.ChildNode(
+                id="sink",
+                name="sink",
+                tool_name="add",
+                inputs={"a": {"$ref": "add_step.value"}, "b": 4},
+                declared_outputs=["value"],
+                refine=False,
+            )
+        ]
+    )
+    bad_task = suite.TaskSpec(
+        id="badref",
+        name="bad ref",
+        expected=5,
+        failed_once=False,
+        plan=bad,
+    )
+    good = suite.TASKS[0]
+    original = suite.TASKS
+    suite.TASKS = [bad_task, good]
+
+    def factory(task, arm):
+        if task.id == "badref":
+            return suite._CountingLLM(suite.MockLLM([bad]))
+        return suite._offline_llm(task, arm)
+
+    try:
+        report = suite.run_suite(factory, offline=True)
+    finally:
+        suite.TASKS = original
+    localized = report["arms"]["localized"]["tasks"]
+    assert [row["id"] for row in localized] == ["badref", good.id]
+    assert localized[0]["success"] is False
+    assert localized[0]["plan_ok"] is False
+    assert localized[0]["tool_calls"] == 0
+    assert "CompileError" in localized[0]["error"]
+    assert localized[1]["success"] is True
+    assert report["arms"]["global_replan"]["tasks"][0]["tool_calls"] == 0
+    assert report["arms"]["sequential"]["tasks"][0]["tool_calls"] == 0

@@ -22,13 +22,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from atg.executor import execute, normalize_output, resolve_inputs
 from atg.graph import TaskGraph
-from atg.llm import DEFAULT_MODEL, FALLBACK_MODELS, MockLLM, OllamaClient, OpenAICompatClient
+from atg.llm import (
+    DEFAULT_MODEL,
+    FALLBACK_MODELS,
+    LLMError,
+    MockLLM,
+    OllamaClient,
+    OpenAICompatClient,
+)
 from atg.metrics import Metrics
-from atg.planner import ChildNode, Decomposition, EdgeSpec, compile_task
+from atg.planner import ChildNode, CompileError, Decomposition, EdgeSpec, compile_task
+from atg.repair import RepairError
 from atg.run import run_task
 from atg.thought import thought_experiment
 from atg.tools import ToolRegistry
@@ -599,10 +607,42 @@ def _run_localized(root: TaskNode, registry: ToolRegistry, llm: Any) -> tuple[Ta
     return result.graph, result.metrics, result.thought.ok
 
 
+def _failed_row(task: TaskSpec, llm: _CountingLLM, started: float, exc: Exception) -> dict[str, Any]:
+    return {
+        "id": task.id,
+        "failed_once": task.failed_once,
+        "expected": task.expected,
+        "actual": None,
+        "success": False,
+        "plan_ok": False,
+        "llm_calls": llm.calls,
+        "tool_calls": 0,
+        "nodes_frozen_reused": 0,
+        "repairs": 0,
+        "wall_time_s": round(time.perf_counter() - started, 6),
+        "max_parallel": 0,
+        "error": f"{type(exc).__name__}: {exc}",
+    }
+
+
 def _run_one(task: TaskSpec, arm: str, llm: _CountingLLM) -> dict[str, Any]:
     registry = make_registry(task.failed_once)
     root = TaskNode(id="job", name=task.name, declared_outputs=["value"])
     started = time.perf_counter()
+    try:
+        return _run_one_body(task, arm, llm, registry, root, started)
+    except (LLMError, CompileError, RepairError, TimeoutError, OSError, ValidationError) as exc:
+        return _failed_row(task, llm, started, exc)
+
+
+def _run_one_body(
+    task: TaskSpec,
+    arm: str,
+    llm: _CountingLLM,
+    registry: ToolRegistry,
+    root: TaskNode,
+    started: float,
+) -> dict[str, Any]:
     plan_ok = False
     if arm == "localized":
         graph, metrics, plan_ok = _run_localized(root, registry, llm)

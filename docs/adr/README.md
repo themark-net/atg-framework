@@ -29,5 +29,6 @@ Architecture: [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 
 | 0022 | Toy PoC metrics for localized repair | Accepted | 2026-10-06 |
 | 0023 | Default local model tag `qwen2.5:14b` | Accepted | 2026-10-06 |
+| 0024 | A malformed decomposition is a compile error | Accepted | 2026-10-06 |
 
 When decision count becomes unwieldy, migrate individual entries to `docs/adr/NNNN-slug.md` via a new Accepted decision—do not fork a second log silently.
