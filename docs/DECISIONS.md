@@ -720,6 +720,88 @@ Rejected alternatives:
 
 ---
 
+## Decision 0021: OpenAI-compatible local client (2026-10-06)
+
+**Status:** Accepted
+
+**Context:** `OllamaClient` posts to Ollama `/api/chat`. That route cannot talk to llama-server, Lemonade, or vLLM. Those servers speak OpenAI `/v1/chat/completions`. OQ-0017 still asks which of those servers should run the live toy. This decision does not pick one.
+
+**Decision:** Add a stdlib `OpenAICompatClient` (`urllib`, `json`, `os`, pydantic). `model` is the argument, else `ATG_MODEL`, else `DEFAULT_MODEL` (`llama3.1:8b`). `base_url` is the argument, else `ATG_BASE_URL`, else `http://127.0.0.1:8000`, with any trailing slash removed. `api_key` is the argument, else `ATG_API_KEY`. When the key is set, send `Authorization: Bearer <key>`. When it is unset, send no auth header. `POST {base_url}/v1/chat/completions` with `model`, `messages`, `temperature` 0, and `stream` false. `complete_structured` first sends `response_format` `{"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema()}}` and parses `choices[0].message.content` with `_parse_model`. If that validation fails, send one follow-up that appends a user message: the previous content was not valid JSON for the schema, return only JSON. The follow-up does not send `response_format`. If the follow-up is still invalid, raise `LLMError`. HTTP errors, URL errors, and socket timeouts raise `LLMError`. `urlopen` honors `timeout_s`. `examples/toy_parallel.py` takes `--client {ollama,openai}` and defaults to `ollama`. With `--live` and `openai`, it constructs `OpenAICompatClient(model, timeout_s=180)`.
+
+**Rationale:** llama-server, Lemonade, and vLLM already share one chat-completions shape. A stdlib client reaches them without a new dependency and without sending Ollama's `/api/chat` body to a foreign port. One schema retry covers a prose reply. A second invalid reply, or a transport failure, is `LLMError` so compile does not loop or hang.
+
+Rejected alternatives:
+
+1. **Requiring the litellm extra** — Decision 0003 keeps LiteLLM optional. The local path and the core tests must not import it.  
+2. **Pointing `ATG_OLLAMA_HOST` at a foreign port** — that client posts `/api/chat` with an Ollama `format` field, not `/v1/chat/completions`.
+
+**Consequences:**
+
+- `--client openai` is opt-in. The default live path stays `OllamaClient`.  
+- Do not change `DEFAULT_MODEL`. It stays `llama3.1:8b` (Decision 0017).  
+- OQ-0017 stays open. This client does not choose the live-toy server.
+
+**References:** OQ-0017; Decision 0003; Decision 0017; `src/atg/llm.py`; `examples/toy_parallel.py`.
+
+---
+
+## How to add a decision
+
+1. Assign next ID (`NNNN` = max + 1, never reuse).  
+2. Append a full section using the template below (include **rejected alternatives**).  
+3. Add a row to `docs/adr/README.md`.  
+4. If it changes layering, update `docs/ARCHITECTURE.md` in the same change.  
+5. If it answers an OQ, set that OQ to `promoted-to-adr` and link both ways.
+
+```markdown
+## Decision NNNN: Short Title (YYYY-MM-DD)
+
+**Status:** Proposed | Accepted | Rejected | Superseded by NNNN
+
+**Context:** …
+
+**Decision:** …
+
+**Rationale:** …
+Rejected alternatives:
+1. …
+2. …
+
+**Consequences:** …
+
+**References:** OQ-…, paths, architecture sections
+```
+
+---
+
+## Decision 0022: Toy PoC metrics for localized repair (2026-10-06)
+
+**Status:** Accepted
+
+**Context:** Decision 0014 freezes a successful sibling and repairs the failed region. That behavior had a unit test and no suite-level comparison against a whole-graph replan or a sequential replay. Paper benchmark scores stay deferred (Decision 0018).
+
+**Decision:** The offline suite defines success, llm_calls, tool_calls, nodes_frozen_reused, repairs, wall_time_s. Localized repair is the product path. Global replan and sequential replay are measurement arms only. These numbers are toy-scale. They are not the paper's ALFWorld / WebShop / ScienceWorld scores.
+
+**Rationale:** A scripted mock can show that repairing the failed region costs fewer structured planner calls than replacing the whole graph, and that sequential replay re-executes tools localized repair kept frozen. The comparison stays in the example so `repair_graph` does not grow a second policy.
+
+Rejected alternatives:
+
+1. **Changing Decision 0014 so the default repair becomes whole-graph** — that throws away the frozen-sibling result the paper's repair is for.
+2. **Treating the suite as a paper reproduction** — the tasks are synthetic. They do not measure ALFWorld, WebShop, or ScienceWorld.
+
+**Consequences:**
+
+- `examples/poc_suite.py` writes `docs/poc/offline-report.json` and `docs/poc/offline-report.md`. `tests/test_poc_suite.py` checks the offline inequalities.
+- Localized `repairs` counts `repair_graph` calls. Global `repairs` counts one whole-graph recompile. Sequential `repairs` stays 0 because a replay is not a repair.
+- `max_parallel` on an arm is the widest wave, not a sum. The sequential arm stays at 1.
+- Decision 0014 stays the product path.
+
+**Revisit / supersede when:** a maintainer names one paper environment to port. That is a new decision, not a change to these toy numbers.
+
+**References:** Decisions 0004, 0014, 0018; Zhang et al. (2026) §4.3 (`zhang2026atg`); `examples/poc_suite.py`; `docs/ATTRIBUTION.md`.
+
+---
+
 ## How to add a decision
 
 1. Assign next ID (`NNNN` = max + 1, never reuse).  

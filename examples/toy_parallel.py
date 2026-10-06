@@ -1,17 +1,20 @@
 """Compile and run a two-branch sum.
 
 Offline (default) uses a scripted decomposition. ``--live`` asks the local
-Ollama model in ``ATG_MODEL`` (default ``llama3.1:8b``, Decision 0017).
+model in ``ATG_MODEL`` (default ``llama3.1:8b``, Decision 0017).
+``--client openai`` uses ``OpenAICompatClient`` (Decision 0021). The default
+client is Ollama.
 
     uv run python examples/toy_parallel.py
     ATG_MODEL=llama3.1:8b uv run python examples/toy_parallel.py --live
+    uv run python examples/toy_parallel.py --live --client openai
 """
 
 import argparse
 import os
 import sys
 
-from atg.llm import DEFAULT_MODEL, FALLBACK_MODELS, MockLLM, OllamaClient
+from atg.llm import DEFAULT_MODEL, FALLBACK_MODELS, MockLLM, OllamaClient, OpenAICompatClient
 from atg.planner import ChildNode, Decomposition, EdgeSpec
 from atg.run import run_task
 from atg.tools import ToolRegistry
@@ -95,7 +98,13 @@ def root() -> TaskNode:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--live", action="store_true", help="call local Ollama")
+    parser.add_argument("--live", action="store_true", help="call the selected local client")
+    parser.add_argument(
+        "--client",
+        choices=("ollama", "openai"),
+        default="ollama",
+        help="live backend; openai is OpenAICompatClient (Decision 0021)",
+    )
     parser.add_argument("--model", default=os.environ.get("ATG_MODEL", DEFAULT_MODEL))
     parser.add_argument("--only", action="store_true", help="do not try fallback tags")
     args = parser.parse_args(argv)
@@ -110,7 +119,11 @@ def main(argv: list[str] | None = None) -> int:
     errors: list[str] = []
     for model in models:
         try:
-            result = run_task(task, tools, OllamaClient(model, timeout_s=180))
+            if args.client == "openai":
+                llm = OpenAICompatClient(model, timeout_s=180)
+            else:
+                llm = OllamaClient(model, timeout_s=180)
+            result = run_task(task, tools, llm)
         except Exception as exc:
             errors.append(f"{model}: {type(exc).__name__}: {exc}")
             continue

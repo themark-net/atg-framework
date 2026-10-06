@@ -25,5 +25,8 @@ Architecture: [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 | 0018 | Paper benchmarks stay deferred | Accepted | 2026-10-05 |
 | 0019 | MIT license | Accepted | 2026-10-05 |
 | 0020 | Third-party ATG gap check | Accepted | 2026-10-05 |
+| 0021 | OpenAI-compatible local client | Accepted | 2026-10-06 |
+
+| 0022 | Toy PoC metrics for localized repair | Accepted | 2026-10-06 |
 
 When decision count becomes unwieldy, migrate individual entries to `docs/adr/NNNN-slug.md` via a new Accepted decision—do not fork a second log silently.

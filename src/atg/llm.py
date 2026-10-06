@@ -2,7 +2,8 @@
 
 Structured subgraphs are JSON that validates as ``Decomposition``
 (Decision 0012). ``OllamaClient`` talks to a local daemon with the
-stdlib. ``LiteLLMClient`` is the optional multi-provider adapter.
+stdlib. ``OpenAICompatClient`` posts to ``/v1/chat/completions``
+(Decision 0021). ``LiteLLMClient`` is the optional multi-provider adapter.
 Independent reimplementation of the ATG planner's model boundary;
 see docs/ATTRIBUTION.md (``zhang2026atg``).
 """
@@ -101,6 +102,110 @@ class OllamaClient:
                 return json.loads(response.read().decode())
         except error.URLError as exc:
             raise LLMError(f"ollama request failed for {self.model}: {exc}") from exc
+
+
+class OpenAICompatClient:
+    """OpenAI ``/v1/chat/completions`` for llama-server, Lemonade, or vLLM.
+
+    Stdlib only (Decision 0021). One schema retry, then ``LLMError``.
+    HTTP errors, URL errors, and socket timeouts are ``LLMError`` and are
+    not retried.
+    """
+
+    def __init__(
+        self,
+        model: str | None = None,
+        *,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        timeout_s: float = 120,
+    ) -> None:
+        self.model = model or os.environ.get("ATG_MODEL", DEFAULT_MODEL)
+        self.base_url = (
+            base_url or os.environ.get("ATG_BASE_URL", "http://127.0.0.1:8000")
+        ).rstrip("/")
+        key = api_key if api_key is not None else os.environ.get("ATG_API_KEY")
+        self.api_key = key or None
+        self.timeout_s = timeout_s
+
+    def complete(self, messages: list[dict], **kwargs: Any) -> str:
+        return self._content(messages, response_format=None)
+
+    def complete_structured(self, messages: list[dict], schema: type[BaseModel]) -> BaseModel:
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema.__name__,
+                "schema": schema.model_json_schema(),
+            },
+        }
+        content = self._content(messages, response_format=response_format)
+        try:
+            return _parse_model(content, schema)
+        except (ValidationError, json.JSONDecodeError):
+            follow_up = list(messages)
+            follow_up.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "The previous content was not valid JSON for the schema. "
+                        "Return only JSON."
+                    ),
+                }
+            )
+            retry = self._content(follow_up, response_format=None)
+            try:
+                return _parse_model(retry, schema)
+            except (ValidationError, json.JSONDecodeError) as exc:
+                raise LLMError(f"{self.model} returned invalid structured output") from exc
+
+    def _content(self, messages: list[dict], *, response_format: dict | None) -> str:
+        body = self._post(messages, response_format=response_format)
+        try:
+            content = body["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise LLMError(
+                f"openai-compat response for {self.model} had no message content"
+            ) from exc
+        if content is None:
+            return ""
+        return str(content)
+
+    def _post(self, messages: list[dict], *, response_format: dict | None) -> dict:
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": 0,
+            "stream": False,
+        }
+        if response_format is not None:
+            payload["response_format"] = response_format
+        data = json.dumps(payload).encode()
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        req = request.Request(
+            f"{self.base_url}/v1/chat/completions",
+            data=data,
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=self.timeout_s) as response:
+                raw = response.read().decode()
+        except error.HTTPError as exc:
+            raise LLMError(f"openai-compat request failed for {self.model}: {exc}") from exc
+        except error.URLError as exc:
+            raise LLMError(f"openai-compat request failed for {self.model}: {exc}") from exc
+        except TimeoutError as exc:
+            raise LLMError(f"openai-compat request timed out for {self.model}: {exc}") from exc
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise LLMError(f"openai-compat response for {self.model} was not JSON") from exc
+        if not isinstance(parsed, dict):
+            raise LLMError(f"openai-compat response for {self.model} was not a JSON object")
+        return parsed
 
 
 class LiteLLMClient:
