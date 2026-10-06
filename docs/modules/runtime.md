@@ -1,5 +1,7 @@
 # Module: atg runtime
 
+Operator walkthrough, by skill level: [`../USING.md`](../USING.md). Ordered next work: [`../NEXT.md`](../NEXT.md).
+
 **Architecture layer:** Planner, executor, thought experiment, repair (`docs/ARCHITECTURE.md` §5.3)  
 **Code:** `src/atg/planner.py`, `executor.py`, `thought.py`, `repair.py`, `run.py`, `llm.py`, `persist.py`, `integrations/`  
 **Related ADR / Decisions:** 0003, 0007, 0009, 0010, 0011, 0012, 0013, 0014, 0015, 0016, 0017, 0020

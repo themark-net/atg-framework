@@ -41,9 +41,11 @@ BibTeX:
 }
 ```
 
-This repository serves as the dedicated development and testing space for ATG ideas. It is linked as an untested prototype from the [local-llm-dev-tools catalog](https://github.com/themark-net/local-llm-dev-tools) (see the ATG entry in TOOLS.md for analysis, feasibility scoring, and distilled methodology).
+This repository is the development tree for those ideas. The [local-llm-dev-tools catalog](https://github.com/themark-net/local-llm-dev-tools) links the ATG entry in TOOLS.md for analysis, feasibility scoring, and distilled methodology.
 
 **Current status:** The MVP loop is implemented and covered by unit tests: compile a task to a DAG, run independent tools together, and repair a failed region without re-running frozen nodes. An offline example prints a two-branch sum. A live Ollama path reads `ATG_MODEL` (default `llama3.1:8b`). On 2026-10-05 that live path exited 1 for `llama3.1:8b` (180s timeout), `qwen2.5:14b` (an edge named the parent id), and `gemma4:latest` (the sink omitted `value`). The compiler now drops edges that name an id outside the child set. Re-run `--live` when `ollama ps` is empty; the numbers are on Decision 0017. Not production-ready. The software license is MIT (Decision 0019).
+
+The library runs without Grok. Start with [`docs/USING.md`](docs/USING.md) (newcomer, tool author, local model on nimo-class hardware, then adapters). Ordered next work is [`docs/NEXT.md`](docs/NEXT.md).
 
 ## Core Goals
 - Reusable Python framework centered on explicit DAG-based task planning and execution.
@@ -74,6 +76,8 @@ Binding detail is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/D
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | ADR log (choices + rejected paths) |
 | [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md) | Parked questions (OQ-NNNN) |
 | [`docs/TODO.md`](docs/TODO.md) | Backlog and phase gates |
+| [`docs/NEXT.md`](docs/NEXT.md) | Ordered next work |
+| [`docs/USING.md`](docs/USING.md) | How to run and extend it, by skill level |
 | [`docs/ATTRIBUTION.md`](docs/ATTRIBUTION.md) | Paper credit |
 | [`docs/README.md`](docs/README.md) | Doc map |
 
@@ -87,7 +91,7 @@ uv run pytest
 uv run python examples/toy_parallel.py
 ```
 
-The offline example compiles a two-branch sum with a scripted model and prints `value=25`. A local Ollama run uses `ATG_MODEL` (default `llama3.1:8b`, Decision 0017):
+The offline example compiles a two-branch sum with a scripted model and prints `mock total={'value': 25} waves=2 parallel=2`. A local Ollama run uses `ATG_MODEL` (default `llama3.1:8b`, Decision 0017):
 
 ```bash
 uv run python examples/toy_parallel.py --live
@@ -96,7 +100,8 @@ uv run python examples/toy_parallel.py --live
 `pip install -e .` also works. The optional `llm` extra installs LiteLLM. The software license is MIT.
 
 ## Integration Notes
-Designed to complement and extend existing setups like DSPy + LiteLLM for orchestration, Ollama for local inference, and custom MCP-style code memory. The explicit graph structure aligns naturally with persistent memory of verified subtasks and dependencies.
+
+`OllamaClient` talks to a local Ollama daemon with the standard library. The `llm` extra installs LiteLLM. `atg.integrations` exposes one-way callables for LangGraph and DSPy and does not import those packages (Decision 0016). Step-by-step use is [`docs/USING.md`](docs/USING.md). Whether pfy-mentat should depend on this package is a later decision: [`docs/ops/pfy-mentat-handoff.md`](docs/ops/pfy-mentat-handoff.md).
 
 ## Links
 - Paper (abs): https://arxiv.org/abs/2607.01942
@@ -105,7 +110,7 @@ Designed to complement and extend existing setups like DSPy + LiteLLM for orches
 - Attribution policy: [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md)
 - Cite this repo: [CITATION.cff](CITATION.cff) · [docs/citations.bib](docs/citations.bib)
 - Analysis & Tracking Repo: https://github.com/themark-net/local-llm-dev-tools (ATG section — feasibility ~75/100, distilled method, implementation guidance)
-- Related Concepts: Your gom-jobbar-grok4 style agents, LangGraph workflows, etc.
+- Usage: [`docs/USING.md`](docs/USING.md) · Next work: [`docs/NEXT.md`](docs/NEXT.md) · X publishing plan: [`docs/ops/x-publishing-handoff.md`](docs/ops/x-publishing-handoff.md)
 
 **License**: MIT (`LICENSE`). The software license is separate from the paper’s arXiv license.
 

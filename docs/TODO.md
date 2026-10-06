@@ -9,11 +9,12 @@
 
 ## Current focus
 
-1. MVP loop is in `src/atg/`. `uv run pytest -q -m "not integration"` → 30 passed, 1 deselected.  
-2. Offline demo: `uv run python examples/toy_parallel.py`.  
+1. MVP loop is in `src/atg/`. `uv run pytest -q -m "not integration"` → 35 passed, 1 deselected (2026-10-05).  
+2. Offline demo: `uv run python examples/toy_parallel.py`. How to use the library, by skill level, is [`NEXT.md`](NEXT.md) and [`USING.md`](USING.md).  
 3. Live remeasure is waiting while other jobs use Ollama. Decision 0017 records the 2026-10-05 failures. When `ollama ps` is empty, run `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only`. If that exits 0, supersede 0017.  
 4. The software license is MIT (Decision 0019). The 2026-10-05 gap check is Decision 0020.  
-5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen.
+5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen.  
+6. pfy-mentat coupling is a later decision in that repo: [`ops/pfy-mentat-handoff.md`](ops/pfy-mentat-handoff.md). Publishing on X is [`ops/x-publishing-handoff.md`](ops/x-publishing-handoff.md). Neither is a code change here.
 
 **Recently closed:** OQ-0011→0019. Earlier: OQ-0005→0012, OQ-0008→0013, OQ-0009→0014, OQ-0013→0016, OQ-0014→0015, OQ-0015→0017. OQ-0012 → wont-do (Decision 0018). OQ-0007→0011.
 
@@ -28,14 +29,18 @@
 | Area | Outcome |
 |------|---------|
 | Runtime | Planner, executor, structural thought, localized repair, JSON history, one-way adapters |
-| Decisions | 0012–0019. License is MIT |
+| Decisions | 0012–0020. License is MIT |
 | Live | Three local tags failed (Decision 0017 measurement). Parent-id edges are dropped. A 14B retry was cancelled while `gpt-oss:120b` was loading |
+| Docs | [`USING.md`](USING.md) (skill levels and nimo-class use), [`NEXT.md`](NEXT.md), pfy and X handoffs under `docs/ops/` |
 
 ### Next session
 
+Follow [`NEXT.md`](NEXT.md).
+
 1. When `ollama ps` is empty, run `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only`.  
 2. If that exits 0 with parallel ≥ 2 and sink value 25, supersede Decision 0017 and set `DEFAULT_MODEL` to `qwen2.5:14b`.  
-3. Do not load a model for the Decision 0017 remeasure while another bench holds Ollama.
+3. Do not load a model for the Decision 0017 remeasure while another bench holds Ollama.  
+4. pfy-mentat and X publishing wait for a session that is asked to do them. Procedures: `docs/ops/pfy-mentat-handoff.md`, `docs/ops/x-publishing-handoff.md`.
 
 ---
 

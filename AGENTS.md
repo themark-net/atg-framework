@@ -9,7 +9,10 @@ Read before multi-step implementation work.
 | Goals, paper map, outdated stack notes, package design | `docs/ARCHITECTURE.md` |
 | Binding decisions + rejected alternatives | `docs/DECISIONS.md` |
 | Parked questions | `docs/OPEN_QUESTIONS.md` |
-| What to do next | `docs/TODO.md` |
+| What to do next | `docs/NEXT.md` (ordered) · `docs/TODO.md` (phase gates) |
+| How to run it, by skill level | `docs/USING.md` |
+| pfy-mentat coupling decision | `docs/ops/pfy-mentat-handoff.md` |
+| X publishing | `docs/ops/x-publishing-handoff.md` |
 | Paper credit | `docs/ATTRIBUTION.md` · skill `/attribution` |
 
 ## Rules
