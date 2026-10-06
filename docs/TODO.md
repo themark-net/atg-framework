@@ -9,16 +9,26 @@
 
 ## Current focus
 
-1. MVP loop is in `src/atg/`. `uv run pytest -q -m "not integration"` → 35 passed, 1 deselected (2026-10-05).  
+1. MVP loop is in `src/atg/`. On 2026-10-06, `uv run pytest -q -m "not integration"` → 40 passed, 1 deselected.  
 2. Offline demo: `uv run python examples/toy_parallel.py`. How to use the library, by skill level, is [`NEXT.md`](NEXT.md) and [`USING.md`](USING.md).  
-3. Live remeasure is waiting while other jobs use Ollama. Decision 0017 records the 2026-10-05 failures. When `ollama ps` is empty, run `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only`. If that exits 0, supersede 0017.  
-4. The software license is MIT (Decision 0019). The 2026-10-05 gap check is Decision 0020.  
-5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen.  
-6. pfy-mentat coupling is a later decision in that repo: [`ops/pfy-mentat-handoff.md`](ops/pfy-mentat-handoff.md). Publishing on X is [`ops/x-publishing-handoff.md`](ops/x-publishing-handoff.md). Neither is a code change here.
+3. Live 14B remeasure is done. Decision 0023 sets `DEFAULT_MODEL` to `qwen2.5:14b`. Decision 0017 records the 2026-10-05 failures and is superseded.  
+4. The software license is MIT (Decision 0019). The 2026-10-05 gap check is Decision 0020. Decisions 0021–0024 cover the OpenAI client, toy PoC metrics, the 14B default, and short `$ref` compile errors.  
+5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen. The 2026-10-06 live runs did not show that double failure.  
+6. pfy-mentat has an unmerged I2 probe on `build/local-lane-atg`. Publishing on X is still [`ops/x-publishing-handoff.md`](ops/x-publishing-handoff.md). Do not post from this backlog.
 
 **Recently closed:** OQ-0011→0019. Earlier: OQ-0005→0012, OQ-0008→0013, OQ-0009→0014, OQ-0013→0016, OQ-0014→0015, OQ-0015→0017. OQ-0012 → wont-do (Decision 0018). OQ-0007→0011.
 
 ---
+
+## Session checkpoint — resume here (2026-10-06)
+
+**State:** `build/atg-finish` holds Decisions 0021–0024. Default model is `qwen2.5:14b`. Offline PoC and `docs/poc/RESULTS.md` are in tree. pfy I2 probe is unmerged on `build/local-lane-atg`. OQ-0016 stays open. Do not merge. Do not post on X.
+
+### Next session
+
+1. Review and merge only through Tester and Reviewer.
+2. Leave `qwen3-coder-next` unloaded until MemAvailable covers 48.19 GiB + 25 GiB.
+3. If a live repair of the same region fails twice, write that on OQ-0016 and stop for a decision.
 
 ## Session checkpoint — resume here (2026-10-05)
 

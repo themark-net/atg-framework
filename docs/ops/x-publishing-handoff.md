@@ -164,7 +164,7 @@ Source: https://github.com/themark-net/atg-framework/blob/<SHA>/tests/test_runti
 
 The offline path needs Python 3.11+ and pydantic. No GPU.
 
-The live client is `OllamaClient` against `http://127.0.0.1:11434` (`ATG_OLLAMA_HOST`). Default tag `llama3.1:8b`. Fallbacks `qwen2.5:14b`, then `gemma4:latest`. The band is a 7B–14B instruct model, which is what a consumer APU can hold.
+The live client is `OllamaClient` against `http://127.0.0.1:11434` (`ATG_OLLAMA_HOST`), or `OpenAICompatClient` for another local `/v1` server. Default tag `qwen2.5:14b` (Decision 0023). Automatic fallback `gemma4:latest`. The band for the default path is about 7B–14B. A 35B tag is a separate measurement and is not the default.
 
 We measured this on a machine called nimo: AMD Ryzen AI MAX+ 395, Radeon 8060S, Strix Halo integrated graphics, 107 GiB unified memory. Similar boxes are the ones that already run those Ollama tags. The unit tests also run on a machine with much less memory, because they use `MockLLM`.
 
@@ -174,7 +174,7 @@ Checked command, when `ollama ps` is empty:
 uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only
 ```
 
-As of 2026-10-05 that live path exited 1 for the 8B tag (180s timeout), the 14B tag (an edge named the parent), and `gemma4:latest` (the sink omitted `value`). The library still runs offline. Do not read this thread as “the 8B model solved the toy.”
+On 2026-10-05 that live path exited 1 for the 8B tag (180s timeout), the 14B tag (an edge named the parent), and `gemma4:latest` (the sink omitted `value`). On 2026-10-06 the same 14B command exited 0: the model named the sink `add_results`, `value` was 25, and the widest wave was 2. A later `qwen3.6:35b` toy suite succeeded on 1 of 12 tasks (`three_wide`, value 12, width 3) and rejected the other plans before any tool ran. Do not read this thread as a paper-benchmark result.
 
 ### Post 6 — integrator, drop-in boundary
 

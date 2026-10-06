@@ -699,10 +699,16 @@ def run_suite(
 ) -> dict[str, Any]:
     """Run every task on localized, global_replan, and sequential."""
 
-    rows = {
-        arm: [_run_one(task, arm, llm_factory(task, arm)) for task in TASKS]
-        for arm in _ARMS
-    }
+    rows: dict[str, list[dict[str, Any]]] = {arm: [] for arm in _ARMS}
+    for arm in _ARMS:
+        for task in TASKS:
+            row = _run_one(task, arm, llm_factory(task, arm))
+            rows[arm].append(row)
+            print(
+                f"{arm} {task.id} success={row['success']} plan_ok={row['plan_ok']} "
+                f"llm_calls={row['llm_calls']}",
+                flush=True,
+            )
     localized = rows["localized"]
     return {
         "suite": "toy-poc",

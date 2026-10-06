@@ -2,9 +2,9 @@
 
 Ordered work from 2026-10-05. Phase checkboxes stay in [`TODO.md`](TODO.md). Binding choices stay in [`DECISIONS.md`](DECISIONS.md). How to run the library, by skill level, is [`USING.md`](USING.md).
 
-The MVP in Decision 0004 is in tree: synthetic tools, a mock model, parallel execution, and localized repair. Version 0.2.0. `uv run pytest -q -m "not integration"` → 35 passed, 1 deselected (2026-10-05). The software license is MIT (Decision 0019).
+The MVP in Decision 0004 is in tree: synthetic tools, a mock model, parallel execution, and localized repair. Version 0.2.0. On 2026-10-06, `uv run pytest -q -m "not integration"` → 40 passed, 1 deselected. The software license is MIT (Decision 0019).
 
-One phase gate is still open. The pfy-mentat decision and the X posts are handoffs for a later session. They are not a reason to change `src/atg/` first.
+The 2026-10-05 count was 35. The later tests cover the OpenAI-compatible client, the offline PoC, and a short `$ref` rejected before any tool runs (Decision 0024).
 
 ## 1. Live toy remeasure — done 2026-10-06
 
@@ -28,17 +28,17 @@ Do not load `qwen3.6:35b`, a coder-only tag, `deepseek-v4-flash:cloud`, or a 120
 
 Keep that behavior until a live run shows the same region failing twice for a reason a wider parent would fix. Then write a superseding decision before changing `repair_graph`. Do not copy `escalate_after` from `origin/cursor/first-pass-atg-loop-b0e3`.
 
-## 3. pfy-mentat: decide coupling, in that repo, later
+## 3. pfy-mentat: I2 probe is on `build/local-lane-atg`
 
-The runnable library is the trigger the pfy catalog named in August 2026. The catalog text is older than this tree and still says the prototype is docs-only.
+On 2026-10-06 a separate worktree, `~/DEVELOP/pfy-mentat/tmp/build-local-lane`, branch `build/local-lane-atg`, added the `llamacpp-nommap` lane and an atg-compile bench. A quiet-host run of that bench on Ollama `qwen3.6:35b` exited 0 with 2/10 sink-correct cases. The catalog stage there is I2. It is not merged, and it is not I3.
 
-A later session determines the stage by following [`ops/pfy-mentat-handoff.md`](ops/pfy-mentat-handoff.md). That work edits pfy-mentat when an operator asks for it there. It does not add a pfy import to this repository, and it does not make this library the primary orchestrator.
+This repository does not import pfy. The pin that bench scored is `86d1b8905116fb7ec954ee5c4fe0d18f763b7e16` on `build/atg-finish`. Do not point the bench at the founder checkout of this repo.
 
 ## 4. Publish on X from the handoff, not from a feature session
 
 [`ops/x-publishing-handoff.md`](ops/x-publishing-handoff.md) is the thread plan, the claims a post may make, and the checks to run before anything is posted. Draft and post only in a session that is asked to do that, and only after naming the account.
 
-The paper’s benchmark sentences stay attributed to Zhang et al. (2026). This repository’s demonstrated result is the offline toy and the unit tests in [`USING.md`](USING.md).
+The paper’s benchmark sentences stay attributed to Zhang et al. (2026). This repository’s demonstrated results are the offline toy, the unit tests, the 2026-10-06 14B live toy (sink value 25, width 2), and the toy PoC in [`poc/RESULTS.md`](poc/RESULTS.md). Do not post from a session that was not asked to post.
 
 ## 5. Stay inside the decisions that already closed scope
 
@@ -59,7 +59,7 @@ Before editing code, `git fetch` and compare `HEAD` with `origin/main`, and list
 |-------------|--------------------------|-----------|
 | Live remeasure | Yes, when `ollama ps` is empty | Exit 0 with the sink at 25, or a new decision note that records the failure |
 | `escalate_after` / wider repair | No | A superseding ADR exists |
-| Import this package from pfy | No, not from an atg-framework session | The pfy handoff’s definition of done, done in pfy-mentat |
+| Import this package from pfy | Already probed on `build/local-lane-atg` at I2. Do not merge that PR from here. | Tester and Reviewer merge it |
 | Post to X | No, unless that session was asked to post and names the account | The X handoff’s pre-post checks pass |
 | Port a paper benchmark | No | Decision 0018 is superseded |
 
