@@ -10,9 +10,9 @@ Localized repair is the product path (Decision 0014). Global replan and sequenti
 
 | arm | success | llm_calls | tool_calls | nodes_frozen_reused | repairs | wall_time_s | max_parallel |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| localized | 12 | 16 | 37 | 6 | 4 | 0.008400 | 3 |
-| global_replan | 12 | 20 | 43 | 0 | 4 | 0.007615 | 3 |
-| sequential | 12 | 12 | 43 | 0 | 0 | 0.002686 | 1 |
+| localized | 12 | 16 | 37 | 6 | 4 | 0.009234 | 3 |
+| global_replan | 12 | 20 | 43 | 0 | 4 | 0.009135 | 3 |
+| sequential | 12 | 12 | 43 | 0 | 0 | 0.002538 | 1 |
 
 Check: localized llm_calls (16) < global_replan llm_calls (20) is true.
 Check: sequential max_parallel is 1.

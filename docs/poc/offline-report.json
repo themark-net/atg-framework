@@ -7,11 +7,12 @@
   "arms": {
     "localized": {
       "success": 12,
+      "plan_ok": 12,
       "llm_calls": 16,
       "tool_calls": 37,
       "nodes_frozen_reused": 6,
       "repairs": 4,
-      "wall_time_s": 0.0084,
+      "wall_time_s": 0.009234,
       "max_parallel": 3,
       "tasks": [
         {
@@ -20,11 +21,12 @@
           "expected": 5,
           "actual": 5,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.00061,
+          "wall_time_s": 0.000619,
           "max_parallel": 1
         },
         {
@@ -33,11 +35,12 @@
           "expected": 42,
           "actual": 42,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000371,
+          "wall_time_s": 0.000338,
           "max_parallel": 1
         },
         {
@@ -46,11 +49,12 @@
           "expected": 20,
           "actual": 20,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 2,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.00044,
+          "wall_time_s": 0.000781,
           "max_parallel": 1
         },
         {
@@ -59,11 +63,12 @@
           "expected": 10,
           "actual": 10,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000493,
+          "wall_time_s": 0.000785,
           "max_parallel": 2
         },
         {
@@ -72,11 +77,12 @@
           "expected": 29,
           "actual": 29,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000445,
+          "wall_time_s": 0.00075,
           "max_parallel": 2
         },
         {
@@ -85,11 +91,12 @@
           "expected": 18,
           "actual": 18,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000642,
+          "wall_time_s": 0.000646,
           "max_parallel": 2
         },
         {
@@ -98,11 +105,12 @@
           "expected": 12,
           "actual": 12,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 5,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000834,
+          "wall_time_s": 0.000774,
           "max_parallel": 3
         },
         {
@@ -111,11 +119,12 @@
           "expected": 36,
           "actual": 36,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000602,
+          "wall_time_s": 0.000504,
           "max_parallel": 1
         },
         {
@@ -124,11 +133,12 @@
           "expected": 25,
           "actual": 25,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 2,
           "tool_calls": 3,
           "nodes_frozen_reused": 1,
           "repairs": 1,
-          "wall_time_s": 0.000933,
+          "wall_time_s": 0.000867,
           "max_parallel": 2
         },
         {
@@ -137,11 +147,12 @@
           "expected": 21,
           "actual": 21,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 2,
           "tool_calls": 3,
           "nodes_frozen_reused": 1,
           "repairs": 1,
-          "wall_time_s": 0.000879,
+          "wall_time_s": 0.000878,
           "max_parallel": 1
         },
         {
@@ -150,11 +161,12 @@
           "expected": 14,
           "actual": 14,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 2,
           "tool_calls": 4,
           "nodes_frozen_reused": 2,
           "repairs": 1,
-          "wall_time_s": 0.000995,
+          "wall_time_s": 0.000984,
           "max_parallel": 2
         },
         {
@@ -163,22 +175,24 @@
           "expected": 12,
           "actual": 12,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 2,
           "tool_calls": 5,
           "nodes_frozen_reused": 2,
           "repairs": 1,
-          "wall_time_s": 0.001156,
+          "wall_time_s": 0.001308,
           "max_parallel": 3
         }
       ]
     },
     "global_replan": {
       "success": 12,
+      "plan_ok": 12,
       "llm_calls": 20,
       "tool_calls": 43,
       "nodes_frozen_reused": 0,
       "repairs": 4,
-      "wall_time_s": 0.007615,
+      "wall_time_s": 0.009135,
       "max_parallel": 3,
       "tasks": [
         {
@@ -187,11 +201,12 @@
           "expected": 5,
           "actual": 5,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000209,
+          "wall_time_s": 0.000275,
           "max_parallel": 1
         },
         {
@@ -200,11 +215,12 @@
           "expected": 42,
           "actual": 42,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000189,
+          "wall_time_s": 0.000181,
           "max_parallel": 1
         },
         {
@@ -213,11 +229,12 @@
           "expected": 20,
           "actual": 20,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 2,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000347,
+          "wall_time_s": 0.00039,
           "max_parallel": 1
         },
         {
@@ -226,11 +243,12 @@
           "expected": 10,
           "actual": 10,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000425,
+          "wall_time_s": 0.000398,
           "max_parallel": 2
         },
         {
@@ -239,11 +257,12 @@
           "expected": 29,
           "actual": 29,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000426,
+          "wall_time_s": 0.000499,
           "max_parallel": 2
         },
         {
@@ -252,11 +271,12 @@
           "expected": 18,
           "actual": 18,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000588,
+          "wall_time_s": 0.000611,
           "max_parallel": 2
         },
         {
@@ -265,11 +285,12 @@
           "expected": 12,
           "actual": 12,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 5,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000694,
+          "wall_time_s": 0.000801,
           "max_parallel": 3
         },
         {
@@ -278,11 +299,12 @@
           "expected": 36,
           "actual": 36,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000498,
+          "wall_time_s": 0.000948,
           "max_parallel": 1
         },
         {
@@ -291,11 +313,12 @@
           "expected": 25,
           "actual": 25,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 3,
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 1,
-          "wall_time_s": 0.00081,
+          "wall_time_s": 0.001193,
           "max_parallel": 2
         },
         {
@@ -304,11 +327,12 @@
           "expected": 21,
           "actual": 21,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 3,
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 1,
-          "wall_time_s": 0.00099,
+          "wall_time_s": 0.001228,
           "max_parallel": 1
         },
         {
@@ -317,11 +341,12 @@
           "expected": 14,
           "actual": 14,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 3,
           "tool_calls": 6,
           "nodes_frozen_reused": 0,
           "repairs": 1,
-          "wall_time_s": 0.001127,
+          "wall_time_s": 0.001271,
           "max_parallel": 2
         },
         {
@@ -330,22 +355,24 @@
           "expected": 12,
           "actual": 12,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 3,
           "tool_calls": 7,
           "nodes_frozen_reused": 0,
           "repairs": 1,
-          "wall_time_s": 0.001312,
+          "wall_time_s": 0.00134,
           "max_parallel": 3
         }
       ]
     },
     "sequential": {
       "success": 12,
+      "plan_ok": 12,
       "llm_calls": 12,
       "tool_calls": 43,
       "nodes_frozen_reused": 0,
       "repairs": 0,
-      "wall_time_s": 0.002686,
+      "wall_time_s": 0.002538,
       "max_parallel": 1,
       "tasks": [
         {
@@ -354,11 +381,12 @@
           "expected": 5,
           "actual": 5,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.00015,
+          "wall_time_s": 0.000112,
           "max_parallel": 1
         },
         {
@@ -367,11 +395,12 @@
           "expected": 42,
           "actual": 42,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 9.7e-05,
+          "wall_time_s": 9e-05,
           "max_parallel": 1
         },
         {
@@ -380,11 +409,12 @@
           "expected": 20,
           "actual": 20,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 2,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000168,
+          "wall_time_s": 0.000146,
           "max_parallel": 1
         },
         {
@@ -393,11 +423,12 @@
           "expected": 10,
           "actual": 10,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000205,
+          "wall_time_s": 0.000199,
           "max_parallel": 1
         },
         {
@@ -406,11 +437,12 @@
           "expected": 29,
           "actual": 29,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000186,
+          "wall_time_s": 0.000188,
           "max_parallel": 1
         },
         {
@@ -419,11 +451,12 @@
           "expected": 18,
           "actual": 18,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.00026,
+          "wall_time_s": 0.000262,
           "max_parallel": 1
         },
         {
@@ -432,11 +465,12 @@
           "expected": 12,
           "actual": 12,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 5,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000316,
+          "wall_time_s": 0.000301,
           "max_parallel": 1
         },
         {
@@ -445,11 +479,12 @@
           "expected": 36,
           "actual": 36,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000201,
+          "wall_time_s": 0.000187,
           "max_parallel": 1
         },
         {
@@ -458,11 +493,12 @@
           "expected": 25,
           "actual": 25,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000228,
+          "wall_time_s": 0.000218,
           "max_parallel": 1
         },
         {
@@ -471,11 +507,12 @@
           "expected": 21,
           "actual": 21,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000213,
+          "wall_time_s": 0.000215,
           "max_parallel": 1
         },
         {
@@ -484,11 +521,12 @@
           "expected": 14,
           "actual": 14,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 6,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000289,
+          "wall_time_s": 0.000293,
           "max_parallel": 1
         },
         {
@@ -497,11 +535,12 @@
           "expected": 12,
           "actual": 12,
           "success": true,
+          "plan_ok": true,
           "llm_calls": 1,
           "tool_calls": 7,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000373,
+          "wall_time_s": 0.000327,
           "max_parallel": 1
         }
       ]

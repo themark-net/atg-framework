@@ -42,7 +42,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 
 | Name | Where | Purpose |
 |------|-------|---------|
-| `ATG_MODEL` | environment, read by `OllamaClient`, `OpenAICompatClient`, and `LiteLLMClient` | Model tag. Default `llama3.1:8b` in `src/atg/llm.py` (Decision 0017). |
+| `ATG_MODEL` | environment, read by `OllamaClient`, `OpenAICompatClient`, and `LiteLLMClient` | Model tag. Default `qwen2.5:14b` in `src/atg/llm.py` (Decision 0023). |
 | `ATG_OLLAMA_HOST` | environment | Default `http://127.0.0.1:11434`. Do not point this at llama-server, Lemonade, or vLLM (Decision 0021). |
 | `ATG_BASE_URL` | environment, read by `OpenAICompatClient` | Server root. Default `http://127.0.0.1:8000`. The client posts `{base}/v1/chat/completions`. |
 | `ATG_API_KEY` | environment, read by `OpenAICompatClient` | Optional. When set, send `Authorization: Bearer <key>`. When unset, send no auth header. |

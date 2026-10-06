@@ -26,7 +26,7 @@ from pydantic import BaseModel
 
 from atg.executor import execute, normalize_output, resolve_inputs
 from atg.graph import TaskGraph
-from atg.llm import DEFAULT_MODEL, FALLBACK_MODELS, MockLLM, OllamaClient
+from atg.llm import DEFAULT_MODEL, FALLBACK_MODELS, MockLLM, OllamaClient, OpenAICompatClient
 from atg.metrics import Metrics
 from atg.planner import ChildNode, Decomposition, EdgeSpec, compile_task
 from atg.run import run_task
@@ -567,7 +567,9 @@ def _compile_and_check(
     return graph
 
 
-def _global_replan(root: TaskNode, registry: ToolRegistry, llm: Any, metrics: Metrics) -> TaskGraph:
+def _global_replan(
+    root: TaskNode, registry: ToolRegistry, llm: Any, metrics: Metrics
+) -> tuple[TaskGraph, bool]:
     """On a tool failure, replace the whole graph under the original root.
 
     Measurement only. This does not call ``repair_graph``.
@@ -575,7 +577,7 @@ def _global_replan(root: TaskNode, registry: ToolRegistry, llm: Any, metrics: Me
 
     graph = _compile_and_check(root, registry, llm, metrics)
     if graph is None:
-        return TaskGraph()
+        return TaskGraph(), False
     execute(graph, registry, metrics=metrics)
     failed = [
         node_id
@@ -583,32 +585,34 @@ def _global_replan(root: TaskNode, registry: ToolRegistry, llm: Any, metrics: Me
         if graph.get(node_id).status == NodeStatus.failed
     ]
     if not failed:
-        return graph
+        return graph, True
     metrics.repairs += 1
     rebuilt = _compile_and_check(root, registry, llm, metrics)
     if rebuilt is None:
-        return graph
+        return graph, True
     execute(rebuilt, registry, metrics=metrics)
-    return rebuilt
+    return rebuilt, True
 
 
-def _run_localized(root: TaskNode, registry: ToolRegistry, llm: Any) -> tuple[TaskGraph, Metrics]:
+def _run_localized(root: TaskNode, registry: ToolRegistry, llm: Any) -> tuple[TaskGraph, Metrics, bool]:
     result = run_task(root, registry, llm, judge=False)
-    return result.graph, result.metrics
+    return result.graph, result.metrics, result.thought.ok
 
 
 def _run_one(task: TaskSpec, arm: str, llm: _CountingLLM) -> dict[str, Any]:
     registry = make_registry(task.failed_once)
     root = TaskNode(id="job", name=task.name, declared_outputs=["value"])
     started = time.perf_counter()
+    plan_ok = False
     if arm == "localized":
-        graph, metrics = _run_localized(root, registry, llm)
+        graph, metrics, plan_ok = _run_localized(root, registry, llm)
     elif arm == "global_replan":
         metrics = Metrics()
-        graph = _global_replan(root, registry, llm, metrics)
+        graph, plan_ok = _global_replan(root, registry, llm, metrics)
     elif arm == "sequential":
         metrics = Metrics()
         graph = _compile_and_check(root, registry, llm, metrics)
+        plan_ok = graph is not None
         if graph is None:
             graph = TaskGraph()
             metrics.max_parallel = 1
@@ -624,6 +628,7 @@ def _run_one(task: TaskSpec, arm: str, llm: _CountingLLM) -> dict[str, Any]:
         "expected": task.expected,
         "actual": actual,
         "success": actual == task.expected,
+        "plan_ok": plan_ok,
         "llm_calls": llm.calls,
         "tool_calls": metrics.tool_calls,
         "nodes_frozen_reused": metrics.nodes_frozen_reused,
@@ -636,6 +641,7 @@ def _run_one(task: TaskSpec, arm: str, llm: _CountingLLM) -> dict[str, Any]:
 def _summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "success": sum(1 for row in rows if row["success"]),
+        "plan_ok": sum(1 for row in rows if row["plan_ok"]),
         "llm_calls": sum(row["llm_calls"] for row in rows),
         "tool_calls": sum(row["tool_calls"] for row in rows),
         "nodes_frozen_reused": sum(row["nodes_frozen_reused"] for row in rows),
@@ -772,13 +778,30 @@ def _print_summary(report: dict[str, Any]) -> None:
         )
 
 
-def _live(model: str, *, host: str | None, only: bool) -> int:
+def _write_report(report: dict[str, Any], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.with_suffix(".md").write_text(_markdown(report), encoding="utf-8")
+
+
+def _live(
+    model: str,
+    *,
+    host: str | None,
+    only: bool,
+    client_name: str,
+    base_url: str | None,
+    report_path: str | None,
+) -> int:
     models = [model]
     if not only:
         models.extend(name for name in FALLBACK_MODELS if name != model)
     errors: list[str] = []
     for name in models:
-        client = OllamaClient(name, host=host, timeout_s=180)
+        if client_name == "openai":
+            client = OpenAICompatClient(name, base_url=base_url, timeout_s=180)
+        else:
+            client = OllamaClient(name, host=host, timeout_s=180)
 
         def factory(_task: TaskSpec, _arm: str, _client: OllamaClient = client) -> _CountingLLM:
             return _CountingLLM(_client)
@@ -788,8 +811,14 @@ def _live(model: str, *, host: str | None, only: bool) -> int:
         except Exception as exc:
             errors.append(f"{name}: {type(exc).__name__}: {exc}")
             continue
-        print(f"model={name}")
+        print(f"model={name} client={client_name}")
         _print_summary(report)
+        if report_path:
+            target = Path(report_path)
+            if len(models) > 1:
+                target = target.with_name(f"{target.stem}-{name}{target.suffix}")
+            _write_report(report, target)
+            print(f"wrote {target}")
         if all(report["arms"][arm]["success"] == report["task_count"] for arm in _ARMS):
             return 0
         errors.append(
@@ -807,12 +836,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default=os.environ.get("ATG_MODEL", DEFAULT_MODEL))
     parser.add_argument("--host", default=os.environ.get("ATG_OLLAMA_HOST"))
     parser.add_argument("--only", action="store_true", help="do not try fallback tags")
+    parser.add_argument("--client", choices=("ollama", "openai"), default="ollama")
+    parser.add_argument("--base-url", default=os.environ.get("ATG_BASE_URL"))
+    parser.add_argument("--report", default=None, help="write a live JSON report to this path")
     args = parser.parse_args(argv)
     if args.live and args.offline:
         print("pass only one of --live or --offline", file=sys.stderr)
         return 2
     if args.live:
-        return _live(args.model, host=args.host, only=args.only)
+        return _live(
+            args.model,
+            host=args.host,
+            only=args.only,
+            client_name=args.client,
+            base_url=args.base_url,
+            report_path=args.report,
+        )
     report = run_offline_suite()
     _print_summary(report)
     print(f"wrote {OFFLINE_JSON}")

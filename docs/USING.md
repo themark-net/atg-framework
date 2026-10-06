@@ -36,7 +36,7 @@ That line means two tools ran together (`2 + 3` and `4 * 5`), then a third tool 
 
 What this repository has not shown:
 
-- A live local model has not yet produced that graph. On 2026-10-05, `--live` exited 1 for `llama3.1:8b`, `qwen2.5:14b`, and `gemma4:latest` (Decision 0017).
+- On 2026-10-06, `qwen2.5:14b` produced the toy graph: two waves, parallel width 2, sink value 25 (Decision 0023). The 2026-10-05 failures are still on Decision 0017.
 - The paper’s ALFWorld, WebShop, and ScienceWorld numbers are the paper’s results. This repository has not re-run those benchmarks (Decision 0018).
 - The package is pre-alpha. The classifier in `pyproject.toml` says so.
 
@@ -170,7 +170,7 @@ Intended model band (Decision 0017):
 
 | Role | Tag |
 |------|-----|
-| Default | `llama3.1:8b` (`ATG_MODEL`, `DEFAULT_MODEL`) |
+| Default | `qwen2.5:14b` (`ATG_MODEL`, `DEFAULT_MODEL`, Decision 0023) |
 | First fallback | `qwen2.5:14b` |
 | Second fallback | `gemma4:latest` |
 

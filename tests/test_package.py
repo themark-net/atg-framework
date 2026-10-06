@@ -17,7 +17,7 @@ def test_package_exports_version_and_attribution():
     assert "Zhang et al." in text
     assert "2607.01942" in text
     assert "official" in text
-    assert atg.DEFAULT_MODEL == "llama3.1:8b"
+    assert atg.DEFAULT_MODEL == "qwen2.5:14b"
     assert callable(atg.run_task)
     assert callable(atg.compile_task)
     assert callable(atg.repair_graph)

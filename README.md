@@ -43,7 +43,7 @@ BibTeX:
 
 This repository is the development tree for those ideas. The [local-llm-dev-tools catalog](https://github.com/themark-net/local-llm-dev-tools) links the ATG entry in TOOLS.md for analysis, feasibility scoring, and distilled methodology.
 
-**Current status:** The MVP loop is implemented and covered by unit tests: compile a task to a DAG, run independent tools together, and repair a failed region without re-running frozen nodes. An offline example prints a two-branch sum. A live Ollama path reads `ATG_MODEL` (default `llama3.1:8b`). On 2026-10-05 that live path exited 1 for `llama3.1:8b` (180s timeout), `qwen2.5:14b` (an edge named the parent id), and `gemma4:latest` (the sink omitted `value`). The compiler now drops edges that name an id outside the child set. Re-run `--live` when `ollama ps` is empty; the numbers are on Decision 0017. Not production-ready. The software license is MIT (Decision 0019).
+**Current status:** The MVP loop is implemented and covered by unit tests: compile a task to a DAG, run independent tools together, and repair a failed region without re-running frozen nodes. An offline example prints a two-branch sum. A live Ollama path reads `ATG_MODEL` (default `qwen2.5:14b`, Decision 0023). On 2026-10-06 `--live --model qwen2.5:14b --only` exited 0 with two parallel waves and sink value 25. The 2026-10-05 failures for `llama3.1:8b`, an earlier 14B parent-id edge, and `gemma4:latest` stay on Decision 0017. Not production-ready. The software license is MIT (Decision 0019).
 
 The library runs without Grok. Start with [`docs/USING.md`](docs/USING.md) (newcomer, tool author, local model on nimo-class hardware, then adapters). Ordered next work is [`docs/NEXT.md`](docs/NEXT.md).
 
@@ -91,7 +91,7 @@ uv run pytest
 uv run python examples/toy_parallel.py
 ```
 
-The offline example compiles a two-branch sum with a scripted model and prints `mock total={'value': 25} waves=2 parallel=2`. A local Ollama run uses `ATG_MODEL` (default `llama3.1:8b`, Decision 0017):
+The offline example compiles a two-branch sum with a scripted model and prints `mock total={'value': 25} waves=2 parallel=2`. A local Ollama run uses `ATG_MODEL` (default `qwen2.5:14b`, Decision 0023):
 
 ```bash
 uv run python examples/toy_parallel.py --live

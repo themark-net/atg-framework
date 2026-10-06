@@ -582,7 +582,7 @@ Rejected alternatives:
 
 ## Decision 0017: Default local model tag (2026-10-05)
 
-**Status:** Accepted  
+**Status:** Superseded by 0023  
 **Promotes:** OQ-0015  
 **Deciders:** Same one-shot authorization as Decision 0012. The machine already had Ollama tags installed. No cloud model was called.
 
@@ -606,6 +606,8 @@ Rejected alternatives:
 - Comparison landed in the same session, not yet remeasured live: the compiler drops an edge whose endpoint is not a child id, and the system prompt tells the model to copy parent declared outputs onto every sink and to keep the parent id out of the edge list. `tests/test_runtime.py::test_edges_that_name_the_parent_are_ignored` covers the edge drop. A follow-up `--live --model qwen2.5:14b --only` was started and then stopped because a separate bench was loading `gpt-oss:120b` on the same Ollama server. That request was cancelled so it would not evict the other model.
 
 **Revisit / supersede when:** `ollama ps` shows no runner (the other local bench has released the GPU). Then run `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only`. If that exits 0 with `max_parallel >= 2` and sink value 25, supersede this decision and set `DEFAULT_MODEL` to `qwen2.5:14b`. A llama3.1:8b comparison after that uses a timeout above 180s. Do not repeat the identical 180s call. Do not load `qwen3.6:35b`, a coder-only tag, or `deepseek-v4-flash:cloud` for this check. Also re-run when the installed small instruct set changes.
+
+- Measurement (2026-10-06): that command exited 0. stdout: `model=qwen2.5:14b ok=True repairs=0 waves=2 parallel=2 outputs={'add_results': {'value': 25}}`. Superseded by Decision 0023.
 
 **References:** OQ-0015; Decision 0003; `src/atg/llm.py`; `examples/toy_parallel.py`.
 
@@ -799,6 +801,33 @@ Rejected alternatives:
 **Revisit / supersede when:** a maintainer names one paper environment to port. That is a new decision, not a change to these toy numbers.
 
 **References:** Decisions 0004, 0014, 0018; Zhang et al. (2026) §4.3 (`zhang2026atg`); `examples/poc_suite.py`; `docs/ATTRIBUTION.md`.
+
+---
+
+## Decision 0023: Default local model tag `qwen2.5:14b` (2026-10-06)
+
+**Status:** Accepted  
+**Supersedes:** Decision 0017
+
+**Context:** Decision 0017 said to set `DEFAULT_MODEL` to `qwen2.5:14b` only if `examples/toy_parallel.py --live --model qwen2.5:14b --only` exited 0 with `max_parallel >= 2` and sink value 25.
+
+**Decision:** `DEFAULT_MODEL` is `qwen2.5:14b`. `ATG_MODEL` still overrides it. The automatic fallback is `gemma4:latest` only. `llama3.1:8b` stays selectable through `ATG_MODEL` and is not an automatic fallback. Coder-only tags, tags much above about 15B, and `deepseek-v4-flash:cloud` stay off the default path. A later sweep may load a larger tag without changing this default.
+
+**Rationale:** On 2026-10-06 the host was quiet (`ollama ps` empty, MemAvailable about 69 GiB). The command exited 0 and printed `model=qwen2.5:14b ok=True repairs=0 waves=2 parallel=2 outputs={'add_results': {'value': 25}}`. The model named the sink `add_results`. The declared output `value` is 25, two waves ran, and the widest wave was 2. That is the swap rule in Decision 0017.
+
+Rejected alternatives:
+
+1. **Leave the default at `llama3.1:8b`** — the written swap rule fired.  
+2. **Also fall back to `llama3.1:8b` automatically** — that tag timed out at 180 seconds on 2026-10-05. A later comparison needs a longer timeout and is not the default path.  
+3. **Make `qwen3.6:35b` the default because a bench scored it higher** — Decision 0017 kept tags above about 15B off the default. The 35B tag is a separate measurement.
+
+**Consequences:**
+
+- `tests/test_package.py` expects `qwen2.5:14b`.  
+- Decision 0017 remains the record of the 2026-10-05 failures. Its status is Superseded by 0023.  
+- The model was unloaded with `keep_alive: 0` after the run.
+
+**References:** Decision 0017; `src/atg/llm.py`; `examples/toy_parallel.py`.
 
 ---
 

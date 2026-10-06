@@ -18,9 +18,10 @@ from pydantic import BaseModel, ValidationError
 DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434"
 # Paper-scale local instruct model already installed here (Decision 0017).
 # Coder-only tags and cloud tags are not the default.
-DEFAULT_MODEL = "llama3.1:8b"
+DEFAULT_MODEL = "qwen2.5:14b"
 # Tried, in order, when the default cannot emit a valid decomposition.
-FALLBACK_MODELS = ("qwen2.5:14b", "gemma4:latest")
+# llama3.1:8b timed out at 180s on 2026-10-05, so it is not an automatic fallback.
+FALLBACK_MODELS = ("gemma4:latest",)
 
 
 class LLMError(Exception):

@@ -6,11 +6,11 @@ The MVP in Decision 0004 is in tree: synthetic tools, a mock model, parallel exe
 
 One phase gate is still open. The pfy-mentat decision and the X posts are handoffs for a later session. They are not a reason to change `src/atg/` first.
 
-## 1. Re-measure the live toy when Ollama is free
+## 1. Live toy remeasure — done 2026-10-06
 
-Phase 5 still has an empty box: the live toy has not exited 0 on one local instruct tag.
+`uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only` exited 0: `waves=2 parallel=2` and sink `value` 25 (`add_results`). Decision 0023 sets `DEFAULT_MODEL` to `qwen2.5:14b` and supersedes Decision 0017.
 
-When `ollama ps` shows no runner:
+The command that produced that line, kept here so a later session can repeat it when `ollama ps` shows no runner:
 
 ```bash
 uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only
@@ -45,7 +45,7 @@ The paper’s benchmark sentences stay attributed to Zhang et al. (2026). This r
 - Paper environments (ALFWorld, WebShop, ScienceWorld) stay deferred (Decision 0018, OQ-0012 wont-do).
 - Core stays free of LangGraph, DSPy, and NetworkX imports (Decision 0002, Decision 0005, Decision 0016).
 - History stays in memory, with a JSON file when the caller asks. SQLite waits on Decision 0015’s size trigger.
-- The default model stays `llama3.1:8b` until step 1 succeeds.
+- The default model is `qwen2.5:14b` (Decision 0023). A larger tag in the sweep does not change it.
 
 ## Operator
 

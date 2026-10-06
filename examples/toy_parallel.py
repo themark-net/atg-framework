@@ -1,7 +1,7 @@
 """Compile and run a two-branch sum.
 
 Offline (default) uses a scripted decomposition. ``--live`` asks the local
-model in ``ATG_MODEL`` (default ``llama3.1:8b``, Decision 0017).
+model in ``ATG_MODEL`` (default ``qwen2.5:14b``, Decision 0023).
 ``--client openai`` uses ``OpenAICompatClient`` (Decision 0021). The default
 client is Ollama.
 
