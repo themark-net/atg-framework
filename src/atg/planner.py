@@ -9,7 +9,7 @@ docs/ATTRIBUTION.md (``zhang2026atg``).
 import json
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from atg.graph import GraphError, TaskGraph
 from atg.history import GraphHistory
@@ -130,8 +130,8 @@ def _messages(
 def _decomposition_graph(spec: Decomposition, parent: TaskNode) -> TaskGraph:
     graph = TaskGraph()
     for child in spec.nodes:
-        graph.add_node(
-            TaskNode(
+        try:
+            node = TaskNode(
                 id=child.id,
                 name=child.name,
                 tool_name=child.tool_name,
@@ -140,7 +140,11 @@ def _decomposition_graph(spec: Decomposition, parent: TaskNode) -> TaskGraph:
                 refine=child.refine,
                 parent_id=parent.id,
             )
-        )
+        except ValidationError as exc:
+            raise CompileError(
+                f"decomposition node {child.id!r} is not a valid task node: {exc}"
+            ) from exc
+        graph.add_node(node)
     known = {child.id for child in spec.nodes}
     for edge in spec.edges:
         if edge.src not in known or edge.dst not in known:

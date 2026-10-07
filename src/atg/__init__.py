@@ -9,7 +9,7 @@ Policy: docs/ATTRIBUTION.md.
 from atg.executor import execute
 from atg.graph import CycleError, GraphError, TaskGraph
 from atg.history import GraphHistory, GraphSnapshot
-from atg.llm import DEFAULT_MODEL, LLMError, MockLLM, OllamaClient
+from atg.llm import DEFAULT_MODEL, LLMError, MockLLM, OllamaClient, OpenAICompatClient
 from atg.metrics import Metrics
 from atg.persist import load_history, save_history
 from atg.planner import CompileError, Decomposition, compile_task
@@ -36,6 +36,7 @@ __all__ = [
     "MockLLM",
     "NodeStatus",
     "OllamaClient",
+    "OpenAICompatClient",
     "Ref",
     "RegisteredTool",
     "RepairError",

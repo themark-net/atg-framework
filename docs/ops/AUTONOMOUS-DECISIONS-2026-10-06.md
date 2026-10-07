@@ -1,0 +1,11 @@
+# Autonomous decisions — 2026-10-06
+
+1. Finish work lives on `build/atg-finish` in `/tmp/atg-finish`, branched from `origin/main` `29bca8a`. The main checkout keeps its uncommitted founder edits. Alternative was committing those edits first. Why: the resume contract forbids touching that checkout.
+2. Phase A is Decision 0021 and phase B is Decision 0022, written in separate worktrees and merged here. Alternative was one shared decision number. Why: the two edits run at the same time.
+3. Lemonade and vLLM are not installed and are not loaded in phase D. LOCAL-BENCH-5 already records Lemonade as skipped and vLLM as an import failure. Alternative was installing a backend. Why: the contract forbids system packages, and the bench says those runtimes are not working here.
+4. After Decision 0023, the automatic fallback is `gemma4:latest` only. Alternative was also retrying `llama3.1:8b`. Why: that tag timed out at 180 seconds on 2026-10-05, and the swap rule only named `qwen2.5:14b` as the new default.
+5. The 14B sink node was named `add_results` by the model. The swap still counts. Alternative was requiring the node id `t`. Why: Decision 0017 asks for sink value 25, parallel width at least 2, and exit 0.
+6. A live `qwen3.6:35b` plan used `$ref: add_step.value`. That is a `CompileError` (Decision 0024) and the suite continues. Alternatives were aborting the sweep or rewriting the shorthand into `.outputs.`. Why: validation already stopped the plan before any tool ran, and one bad task must not erase the rest of the measurement.
+7. `qwen3-coder-next` was not loaded. The GGUF is 51,741,599,936 bytes. MemAvailable after the 35B unload was 65.3 GiB, under blob size + 25 GiB. Alternative was loading it anyway. Why: the host-quiet gate forbids that.
+8. The live atg-compile bench uses `--case-timeout 180`. The bench default is 60s. The 35B PoC calls took about 71s each. Alternative was keeping 60s. Why: a 60s cap would record timeouts instead of plans.
+9. pfy stage moves to I2 only if that live bench exits 0 and at least one case is sink-correct. Alternatives were any exit 0, or requiring every case. Why: exit 0 means the bench scored; a correct sink is the live pass the drop-in requires. Zero correct sinks stays I1.

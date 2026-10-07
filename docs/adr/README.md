@@ -21,9 +21,14 @@ Architecture: [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 | 0014 | LCA repair region and a narrow reset | Accepted | 2026-10-05 |
 | 0015 | JSON checkpoint beside in-memory history | Accepted | 2026-10-05 |
 | 0016 | One-way DSPy and LangGraph callables | Accepted | 2026-10-05 |
-| 0017 | Default local model tag `llama3.1:8b` | Accepted | 2026-10-05 |
+| 0017 | Default local model tag `llama3.1:8b` | Superseded by 0023 | 2026-10-05 |
 | 0018 | Paper benchmarks stay deferred | Accepted | 2026-10-05 |
 | 0019 | MIT license | Accepted | 2026-10-05 |
 | 0020 | Third-party ATG gap check | Accepted | 2026-10-05 |
+| 0021 | OpenAI-compatible local client | Accepted | 2026-10-06 |
+
+| 0022 | Toy PoC metrics for localized repair | Accepted | 2026-10-06 |
+| 0023 | Default local model tag `qwen2.5:14b` | Accepted | 2026-10-06 |
+| 0024 | A malformed decomposition is a compile error | Accepted | 2026-10-06 |
 
 When decision count becomes unwieldy, migrate individual entries to `docs/adr/NNNN-slug.md` via a new Accepted decision—do not fork a second log silently.

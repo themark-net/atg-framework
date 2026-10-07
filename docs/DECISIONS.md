@@ -582,7 +582,7 @@ Rejected alternatives:
 
 ## Decision 0017: Default local model tag (2026-10-05)
 
-**Status:** Accepted  
+**Status:** Superseded by 0023  
 **Promotes:** OQ-0015  
 **Deciders:** Same one-shot authorization as Decision 0012. The machine already had Ollama tags installed. No cloud model was called.
 
@@ -606,6 +606,8 @@ Rejected alternatives:
 - Comparison landed in the same session, not yet remeasured live: the compiler drops an edge whose endpoint is not a child id, and the system prompt tells the model to copy parent declared outputs onto every sink and to keep the parent id out of the edge list. `tests/test_runtime.py::test_edges_that_name_the_parent_are_ignored` covers the edge drop. A follow-up `--live --model qwen2.5:14b --only` was started and then stopped because a separate bench was loading `gpt-oss:120b` on the same Ollama server. That request was cancelled so it would not evict the other model.
 
 **Revisit / supersede when:** `ollama ps` shows no runner (the other local bench has released the GPU). Then run `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only`. If that exits 0 with `max_parallel >= 2` and sink value 25, supersede this decision and set `DEFAULT_MODEL` to `qwen2.5:14b`. A llama3.1:8b comparison after that uses a timeout above 180s. Do not repeat the identical 180s call. Do not load `qwen3.6:35b`, a coder-only tag, or `deepseek-v4-flash:cloud` for this check. Also re-run when the installed small instruct set changes.
+
+- Measurement (2026-10-06): that command exited 0. stdout: `model=qwen2.5:14b ok=True repairs=0 waves=2 parallel=2 outputs={'add_results': {'value': 25}}`. Superseded by Decision 0023.
 
 **References:** OQ-0015; Decision 0003; `src/atg/llm.py`; `examples/toy_parallel.py`.
 
@@ -717,6 +719,141 @@ Rejected alternatives:
 **Revisit / supersede when:** a judge schema grows a node-id field, or a tool schema grows a declared write set. Either change needs its own decision.
 
 **References:** Zhang et al. (2026) §§4.1–4.3 (`zhang2026atg`); Decisions 0004, 0007, 0009, 0011, 0013, 0014, 0015; https://github.com/RegardV/ATG-looping; https://www.snackonai.com/p/atomic-task-graph-a-7b-model-that-beats-gpt-4-react-on-alfworld-and-webshop-has-nothing-to-do-with-t; `docs/ATTRIBUTION.md`.
+
+---
+
+## Decision 0021: OpenAI-compatible local client (2026-10-06)
+
+**Status:** Accepted
+
+**Context:** `OllamaClient` posts to Ollama `/api/chat`. That route cannot talk to llama-server, Lemonade, or vLLM. Those servers speak OpenAI `/v1/chat/completions`. OQ-0017 still asks which of those servers should run the live toy. This decision does not pick one.
+
+**Decision:** Add a stdlib `OpenAICompatClient` (`urllib`, `json`, `os`, pydantic). `model` is the argument, else `ATG_MODEL`, else `DEFAULT_MODEL` (`llama3.1:8b`). `base_url` is the argument, else `ATG_BASE_URL`, else `http://127.0.0.1:8000`, with any trailing slash removed. `api_key` is the argument, else `ATG_API_KEY`. When the key is set, send `Authorization: Bearer <key>`. When it is unset, send no auth header. `POST {base_url}/v1/chat/completions` with `model`, `messages`, `temperature` 0, and `stream` false. `complete_structured` first sends `response_format` `{"type": "json_schema", "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema()}}` and parses `choices[0].message.content` with `_parse_model`. If that validation fails, send one follow-up that appends a user message: the previous content was not valid JSON for the schema, return only JSON. The follow-up does not send `response_format`. If the follow-up is still invalid, raise `LLMError`. HTTP errors, URL errors, and socket timeouts raise `LLMError`. `urlopen` honors `timeout_s`. `examples/toy_parallel.py` takes `--client {ollama,openai}` and defaults to `ollama`. With `--live` and `openai`, it constructs `OpenAICompatClient(model, timeout_s=180)`.
+
+**Rationale:** llama-server, Lemonade, and vLLM already share one chat-completions shape. A stdlib client reaches them without a new dependency and without sending Ollama's `/api/chat` body to a foreign port. One schema retry covers a prose reply. A second invalid reply, or a transport failure, is `LLMError` so compile does not loop or hang.
+
+Rejected alternatives:
+
+1. **Requiring the litellm extra** — Decision 0003 keeps LiteLLM optional. The local path and the core tests must not import it.  
+2. **Pointing `ATG_OLLAMA_HOST` at a foreign port** — that client posts `/api/chat` with an Ollama `format` field, not `/v1/chat/completions`.
+
+**Consequences:**
+
+- `--client openai` is opt-in. The default live path stays `OllamaClient`.  
+- Do not change `DEFAULT_MODEL`. It stays `llama3.1:8b` (Decision 0017).  
+- OQ-0017 stays open. This client does not choose the live-toy server.
+
+**References:** OQ-0017; Decision 0003; Decision 0017; `src/atg/llm.py`; `examples/toy_parallel.py`.
+
+---
+
+## How to add a decision
+
+1. Assign next ID (`NNNN` = max + 1, never reuse).  
+2. Append a full section using the template below (include **rejected alternatives**).  
+3. Add a row to `docs/adr/README.md`.  
+4. If it changes layering, update `docs/ARCHITECTURE.md` in the same change.  
+5. If it answers an OQ, set that OQ to `promoted-to-adr` and link both ways.
+
+```markdown
+## Decision NNNN: Short Title (YYYY-MM-DD)
+
+**Status:** Proposed | Accepted | Rejected | Superseded by NNNN
+
+**Context:** …
+
+**Decision:** …
+
+**Rationale:** …
+Rejected alternatives:
+1. …
+2. …
+
+**Consequences:** …
+
+**References:** OQ-…, paths, architecture sections
+```
+
+---
+
+## Decision 0022: Toy PoC metrics for localized repair (2026-10-06)
+
+**Status:** Accepted
+
+**Context:** Decision 0014 freezes a successful sibling and repairs the failed region. That behavior had a unit test and no suite-level comparison against a whole-graph replan or a sequential replay. Paper benchmark scores stay deferred (Decision 0018).
+
+**Decision:** The offline suite defines success, llm_calls, tool_calls, nodes_frozen_reused, repairs, wall_time_s. Localized repair is the product path. Global replan and sequential replay are measurement arms only. These numbers are toy-scale. They are not the paper's ALFWorld / WebShop / ScienceWorld scores.
+
+**Rationale:** A scripted mock can show that repairing the failed region costs fewer structured planner calls than replacing the whole graph, and that sequential replay re-executes tools localized repair kept frozen. The comparison stays in the example so `repair_graph` does not grow a second policy.
+
+Rejected alternatives:
+
+1. **Changing Decision 0014 so the default repair becomes whole-graph** — that throws away the frozen-sibling result the paper's repair is for.
+2. **Treating the suite as a paper reproduction** — the tasks are synthetic. They do not measure ALFWorld, WebShop, or ScienceWorld.
+
+**Consequences:**
+
+- `examples/poc_suite.py` writes `docs/poc/offline-report.json` and `docs/poc/offline-report.md`. `tests/test_poc_suite.py` checks the offline inequalities.
+- Localized `repairs` counts `repair_graph` calls. Global `repairs` counts one whole-graph recompile. Sequential `repairs` stays 0 because a replay is not a repair.
+- `max_parallel` on an arm is the widest wave, not a sum. The sequential arm stays at 1.
+- Decision 0014 stays the product path.
+
+**Revisit / supersede when:** a maintainer names one paper environment to port. That is a new decision, not a change to these toy numbers.
+
+**References:** Decisions 0004, 0014, 0018; Zhang et al. (2026) §4.3 (`zhang2026atg`); `examples/poc_suite.py`; `docs/ATTRIBUTION.md`.
+
+---
+
+## Decision 0023: Default local model tag `qwen2.5:14b` (2026-10-06)
+
+**Status:** Accepted  
+**Supersedes:** Decision 0017
+
+**Context:** Decision 0017 said to set `DEFAULT_MODEL` to `qwen2.5:14b` only if `examples/toy_parallel.py --live --model qwen2.5:14b --only` exited 0 with `max_parallel >= 2` and sink value 25.
+
+**Decision:** `DEFAULT_MODEL` is `qwen2.5:14b`. `ATG_MODEL` still overrides it. The automatic fallback is `gemma4:latest` only. `llama3.1:8b` stays selectable through `ATG_MODEL` and is not an automatic fallback. Coder-only tags, tags much above about 15B, and `deepseek-v4-flash:cloud` stay off the default path. A later sweep may load a larger tag without changing this default.
+
+**Rationale:** On 2026-10-06 the host was quiet (`ollama ps` empty, MemAvailable about 69 GiB). The command exited 0 and printed `model=qwen2.5:14b ok=True repairs=0 waves=2 parallel=2 outputs={'add_results': {'value': 25}}`. The model named the sink `add_results`. The declared output `value` is 25, two waves ran, and the widest wave was 2. That is the swap rule in Decision 0017.
+
+Rejected alternatives:
+
+1. **Leave the default at `llama3.1:8b`** — the written swap rule fired.  
+2. **Also fall back to `llama3.1:8b` automatically** — that tag timed out at 180 seconds on 2026-10-05. A later comparison needs a longer timeout and is not the default path.  
+3. **Make `qwen3.6:35b` the default because a bench scored it higher** — Decision 0017 kept tags above about 15B off the default. The 35B tag is a separate measurement.
+
+**Consequences:**
+
+- `tests/test_package.py` expects `qwen2.5:14b`.  
+- Decision 0017 remains the record of the 2026-10-05 failures. Its status is Superseded by 0023.  
+- The model was unloaded with `keep_alive: 0` after the run.
+
+**References:** Decision 0017; `src/atg/llm.py`; `examples/toy_parallel.py`.
+
+---
+
+## Decision 0024: A malformed decomposition is a compile error (2026-10-06)
+
+**Status:** Accepted
+
+**Context:** `qwen3.6:35b` returned a decomposition whose input was `{"$ref": "add_step.value"}`. `TaskNode` rejects a ref that is not `node_id.outputs.field`. That `ValidationError` left `compile_task` and aborted the live PoC before any report was written. No tool had run.
+
+**Decision:** Building a `TaskNode` from a decomposition catches `ValidationError` and raises `CompileError`. The PoC records that task as `plan_ok` false and `success` false, then runs the remaining tasks. The shorthand is not rewritten into `.outputs.`.
+
+**Rationale:** Typed validation already stopped the bad plan before execution. The missing piece was a compile error the caller can record. A sweep that dies on the first bad plan measures nothing.
+
+Rejected alternatives:
+
+1. **Rewrite `node.field` into `node.outputs.field`** — hides the invalid plan and inflates the valid-plan rate.  
+2. **Abort the whole suite** — one bad task erases the other eleven.  
+3. **Repair the graph when compilation never built one** — Decision 0014 repairs a region of an existing graph. There is no region yet.
+
+**Consequences:**
+
+- `compile_task` and `run_task` raise `CompileError` for a short `$ref`. Tools are not called.  
+- Callers that already catch `CompileError` keep going. `ValidationError` is still caught at the PoC boundary so a later escape does not abort a live sweep.  
+- This does not add a second model retry on the Ollama client.
+
+**References:** Decisions 0006, 0012, 0014; `src/atg/planner.py`; `examples/poc_suite.py`.
 
 ---
 

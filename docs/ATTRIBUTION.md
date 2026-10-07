@@ -47,6 +47,8 @@ Do **not** present these as original inventions of this repo:
 - **Minimal necessary subgraph repair** (freeze validated regions; repair smallest affected subgraph)
 - Empirical framing around long-horizon agents, intermediate-result reuse, and localized failure recovery
 
+The offline suite in `examples/poc_suite.py` (Decision 0022) measures that localized-repair idea (Zhang et al. 2026, §4.3). Successful siblings stay frozen while the failed region is replaced. Global replan and sequential replay are measurement arms only. The suite does not report the paper's ALFWorld, WebShop, or ScienceWorld tables.
+
 ### What *this* repo may claim
 
 - Engineering choices, APIs, tests, integrations (DSPy, LangGraph, Ollama, …)

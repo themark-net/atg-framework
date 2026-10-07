@@ -4,7 +4,7 @@ Operator walkthrough, by skill level: [`../USING.md`](../USING.md). Ordered next
 
 **Architecture layer:** Planner, executor, thought experiment, repair (`docs/ARCHITECTURE.md` §5.3)  
 **Code:** `src/atg/planner.py`, `executor.py`, `thought.py`, `repair.py`, `run.py`, `llm.py`, `persist.py`, `integrations/`  
-**Related ADR / Decisions:** 0003, 0007, 0009, 0010, 0011, 0012, 0013, 0014, 0015, 0016, 0017, 0020
+**Related ADR / Decisions:** 0003, 0007, 0009, 0010, 0011, 0012, 0013, 0014, 0015, 0016, 0017, 0020, 0021
 
 Paper stages in this layer are Zhang et al. (2026), `zhang2026atg`: §4.1 compilation, §4.2 dependency-aware execution and the thought experiment, §4.3 minimal repair. Independent reimplementation. Policy: `docs/ATTRIBUTION.md`.
 
@@ -32,7 +32,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 |---------|--------------|----------|
 | `CompileError` depth cap | The model kept emitting non-atomic nodes | Lower the task or raise `max_depth` for one run. The default cap is 6 (Decision 0007). |
 | `CompileError` / `RepairError` interface | The decomposition dropped a parent `$ref` or a sink output | Fix the model output. The graph from before the failed replacement is unchanged. |
-| `LLMError` | Ollama is down, or the tag returned non-JSON | Check `ollama list`. The live script tries `qwen2.5:14b`, then `gemma4:latest`. |
+| `LLMError` | Ollama is down, the tag returned non-JSON, or `OpenAICompatClient` saw an HTTP error, URL error, or socket timeout | Check `ollama list` for the default client. For `--client openai`, check `ATG_BASE_URL`. The live script tries `qwen2.5:14b`, then `gemma4:latest`. |
 | Tool node `failed` after two repairs | The callable raised twice, or a pre-execution repair used the same budget | `RunResult.metrics.repairs` counts both. The cap is `max_repairs` (default 2). |
 | Thought check fails and nothing runs | The error names no live node, often an unscoped judge reason | That is Decision 0020. A named node is repaired before `execute`. |
 | `frozen nodes cannot be reset` | `reset_for_repair` on a frozen node | That refusal is Decision 0014. Repair must replace a different region. |
@@ -42,8 +42,10 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 
 | Name | Where | Purpose |
 |------|-------|---------|
-| `ATG_MODEL` | environment, read by `OllamaClient` and `LiteLLMClient` | Model tag. Default `llama3.1:8b` in `src/atg/llm.py` (Decision 0017). |
-| `ATG_OLLAMA_HOST` | environment | Default `http://127.0.0.1:11434`. |
+| `ATG_MODEL` | environment, read by `OllamaClient`, `OpenAICompatClient`, and `LiteLLMClient` | Model tag. Default `qwen2.5:14b` in `src/atg/llm.py` (Decision 0023). |
+| `ATG_OLLAMA_HOST` | environment | Default `http://127.0.0.1:11434`. Do not point this at llama-server, Lemonade, or vLLM (Decision 0021). |
+| `ATG_BASE_URL` | environment, read by `OpenAICompatClient` | Server root. Default `http://127.0.0.1:8000`. The client posts `{base}/v1/chat/completions`. |
+| `ATG_API_KEY` | environment, read by `OpenAICompatClient` | Optional. When set, send `Authorization: Bearer <key>`. When unset, send no auth header. |
 | `ATG_JUDGE` | environment, `1` enables | One judge call after structural checks pass (Decision 0013). |
 | `max_depth` | `compile_task` / `run_task` argument | Refine cap. Default 6. |
 | `max_repairs` | `run_task` argument | Default 2. |
@@ -61,7 +63,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 - `structural_thought`, `thought_experiment`
 - `repair_graph`, `lowest_common_ancestor`, `repair_region`
 - `run_task`, `RunResult`
-- `MockLLM`, `OllamaClient`, `LiteLLMClient`
+- `MockLLM`, `OllamaClient`, `OpenAICompatClient`, `LiteLLMClient`
 - `save_history`, `load_history`
 - `as_langgraph_node`, `as_dspy_forward`
 - `TaskGraph.replace_node`, `TaskGraph.reset_for_repair`
