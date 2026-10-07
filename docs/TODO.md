@@ -13,8 +13,9 @@
 2. Offline demo: `uv run python examples/toy_parallel.py`. How to use the library, by skill level, is [`NEXT.md`](NEXT.md) and [`USING.md`](USING.md).  
 3. Live 14B remeasure is done. Decision 0023 sets `DEFAULT_MODEL` to `qwen2.5:14b`. Decision 0017 records the 2026-10-05 failures and is superseded.  
 4. The software license is MIT (Decision 0019). The 2026-10-05 gap check is Decision 0020. Decisions 0021–0024 cover the OpenAI client, toy PoC metrics, the 14B default, and short `$ref` compile errors.  
-5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen. The 2026-10-06 live runs did not show that double failure.  
-6. pfy-mentat has an unmerged I2 probe on `build/local-lane-atg`. Publishing on X is still [`ops/x-publishing-handoff.md`](ops/x-publishing-handoff.md). Do not post from this backlog.
+5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen. The 2026-10-06 live runs did not show that double failure. The Cursor branch’s `escalate_after` was not merged.  
+6. **OQ-0017** is open: the next live comparison among Ollama, the home vLLM environment, and Lemonade. Decision 0023 stays the default until a new measurement and a decision.  
+7. pfy-mentat #279 is merged at catalog stage I2. Publishing on X is still [`ops/x-publishing-handoff.md`](ops/x-publishing-handoff.md). Do not post from this backlog.
 
 **Recently closed:** OQ-0011→0019. Earlier: OQ-0005→0012, OQ-0008→0013, OQ-0009→0014, OQ-0013→0016, OQ-0014→0015, OQ-0015→0017. OQ-0012 → wont-do (Decision 0018). OQ-0007→0011.
 
@@ -22,7 +23,7 @@
 
 ## Session checkpoint — resume here (2026-10-06)
 
-**State:** `build/atg-finish` holds Decisions 0021–0024. Default model is `qwen2.5:14b`. Offline PoC and `docs/poc/RESULTS.md` are in tree. pfy I2 probe is unmerged on `build/local-lane-atg`. OQ-0016 stays open. Do not merge. Do not post on X.
+**State:** `main` holds Decisions 0021–0024. Default model is `qwen2.5:14b`. Offline PoC and `docs/poc/RESULTS.md` are in tree. pfy-mentat #279 is merged at I2. OQ-0016 and OQ-0017 stay open. Do not post on X.
 
 ### Next session
 

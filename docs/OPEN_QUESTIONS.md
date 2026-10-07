@@ -30,6 +30,7 @@
 | [OQ-0014](#oq-0014-persistence--memory-backend) | P2 | promoted-to-adr | Persistence / memory backend | — | Decision 0015 |
 | [OQ-0015](#oq-0015-default-example-model-tags) | P2 | promoted-to-adr | Default example model tags | — | Decision 0017 |
 | [OQ-0016](#oq-0016-repair-escalation-policy) | P2 | open | Repair escalation policy | Repeated failures | Decision 0014 |
+| [OQ-0017](#oq-0017-which-local-server-runs-the-next-live-comparison) | P2 | open | Which local server runs the next live comparison | Live runtime comparison | Decision 0021 |
 
 ---
 
@@ -566,7 +567,43 @@ You can say “R1” and then override individual letters.
 
 **Resolution notes:**
 
-- **2026-10-05:** Recorded from the remote first pass. Not implemented. The `$parent` decomposition conventions in that branch’s OQ-0017 were not copied. Decision 0012 already fixes literals and `$ref`.
+- **2026-10-05:** Recorded from `cursor/first-pass-atg-loop-b0e3` (`1982c58`). Not implemented. That branch’s `$parent` input convention was not copied. Decision 0012 already fixes literals and `$ref`.
+- **2026-10-07:** The branch was not merged. `main` keeps `run_task`. `escalate_after` stays out until a live double failure says otherwise.
+
+---
+
+### OQ-0017: Which local server runs the next live comparison
+
+- **Priority:** P2
+- **Status:** open
+- **Created:** 2026-10-06
+- **Updated:** 2026-10-07
+- **Blocks:** a measured choice of live server after the Ollama default
+- **Blocked-by:** a quiet host and one scored run
+- **Related-ADR:** Decision 0021, Decision 0023
+- **Related-code:** `src/atg/llm.py` (`OllamaClient`, `OpenAICompatClient`), `examples/toy_parallel.py`
+- **Feature/runbook:** `docs/NEXT.md`, `docs/USING.md` Level 3
+
+**Question:** The default live path is Ollama `qwen2.5:14b`. For the next comparison, should a run go through Lemonade, through the vLLM environment under the home directory, or stay on Ollama?
+
+**Context:** Decision 0023 already accepted the 14B Ollama toy (sink value 25, width 2). Decision 0021 added `OpenAICompatClient`, so Lemonade and vLLM are reached with `ATG_BASE_URL` and `--client openai`. They do not need a new client, and they do not need `ATG_OLLAMA_HOST`.
+
+On 2026-10-06 Lemonade 2026.40.0 was listening on `127.0.0.1:13305` with no model loaded. The NPU is present (`1022:17f0`, `/dev/accel`). `flm:npu` was not installed, so that server was not using the NPU. A GGUF through Lemonade’s llama.cpp backend uses the same iGPU class as Ollama.
+
+On 2026-10-07 `/home/mark/vllm-rocm/.venv` imports `vllm` 0.29.1.dev0 (ROCm 10.1 userspace inside that venv, Python 3.14). This repository has not sent a toy through that server. vLLM uses the 8060S, not the NPU.
+
+**Options:**
+
+1. Keep the Decision 0023 default on Ollama. Compare another server later, one model at a time.
+2. Serve one 7B–14B checkpoint with the home vLLM venv and run `examples/toy_parallel.py --live --client openai --only`. Judge schema success and sink value.
+3. Point the same command at Lemonade’s OpenAI API after a model is loaded there. The NPU comparison is a separate run that needs `flm:npu` and an FLM model.
+
+**Recommendation:** Keep (1) as the default. The next measurement is one quiet-host toy through `OpenAICompatClient`, either vLLM or Lemonade, not both at once. Do not change `DEFAULT_MODEL` from that run unless it exits 0 with sink value 25 and width at least 2, and a decision says to swap.
+
+**Resolution notes:**
+
+- **2026-10-06:** Parked while another bench held the GPU. Notes lived only in a stash on `29bca8a`.
+- **2026-10-07:** Restored onto `main`. The 14B Ollama toy has since passed, and the OpenAI client exists. vLLM imports in the home venv and is still unscored.
 
 ---
 

@@ -26,13 +26,15 @@ Do not load `qwen3.6:35b`, a coder-only tag, `deepseek-v4-flash:cloud`, or a 120
 
 [`OQ-0016`](OPEN_QUESTIONS.md) asks whether a second failure of the same repair region should widen to the parent. Decision 0014 retries that region until `max_repairs` (default 2) and does not widen.
 
-Keep that behavior until a live run shows the same region failing twice for a reason a wider parent would fix. Then write a superseding decision before changing `repair_graph`. Do not copy `escalate_after` from `origin/cursor/first-pass-atg-loop-b0e3`.
+Keep that behavior until a live run shows the same region failing twice for a reason a wider parent would fix. Then write a superseding decision before changing `repair_graph`. The Cursor branch’s `escalate_after` was not copied. That branch is `1982c58` and was deleted on 2026-10-07.
+
+[`OQ-0017`](OPEN_QUESTIONS.md) asks whether the next live comparison should stay on Ollama, move to the home vLLM environment, or move to Lemonade. The default stays `qwen2.5:14b` on Ollama until a decision says otherwise.
 
 ## 3. pfy-mentat: I2 probe is on `build/local-lane-atg`
 
-On 2026-10-06 a separate worktree, `~/DEVELOP/pfy-mentat/tmp/build-local-lane`, branch `build/local-lane-atg`, added the `llamacpp-nommap` lane and an atg-compile bench. A quiet-host run of that bench on Ollama `qwen3.6:35b` exited 0 with 2/10 sink-correct cases. The catalog stage there is I2. It is not merged, and it is not I3.
+On 2026-10-06 the pfy branch `build/local-lane-atg` added the `llamacpp-nommap` lane and an atg-compile bench. A quiet-host run on Ollama `qwen3.6:35b` exited 0 with 2/10 sink-correct cases. That pull request merged as pfy-mentat #279. The catalog stage there is I2, not I3.
 
-This repository does not import pfy. The pin that bench scored is `86d1b8905116fb7ec954ee5c4fe0d18f763b7e16` on `build/atg-finish`. Do not point the bench at the founder checkout of this repo.
+This repository does not import pfy. The scored tree was `86d1b8905116fb7ec954ee5c4fe0d18f763b7e16`; the bench pin moved to `3c686b6` before the merge.
 
 ## 4. Publish on X from the handoff, not from a feature session
 

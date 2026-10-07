@@ -204,6 +204,8 @@ llm = OllamaClient(os.environ.get("ATG_MODEL", "qwen2.5:14b"), timeout_s=180)
 
 Set `ATG_OLLAMA_HOST` when the daemon is not on `http://127.0.0.1:11434`.
 
+Lemonade and vLLM speak `/v1/chat/completions`. Point `ATG_BASE_URL` at that server and pass `--client openai`. Do not point `ATG_OLLAMA_HOST` at those ports. Which of those servers is worth a scored comparison is [OQ-0017](OPEN_QUESTIONS.md). The default remains Ollama `qwen2.5:14b`.
+
 ## Level 4 — Checkpoints and other frameworks
 
 JSON history is optional. The runtime keeps snapshots in memory either way.
