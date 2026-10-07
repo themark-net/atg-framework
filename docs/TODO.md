@@ -14,7 +14,7 @@
 3. Live 14B remeasure is done. Decision 0023 sets `DEFAULT_MODEL` to `qwen2.5:14b`. Decision 0017 records the 2026-10-05 failures and is superseded.  
 4. The software license is MIT (Decision 0019). The 2026-10-05 gap check is Decision 0020. Decisions 0021–0024 cover the OpenAI client, toy PoC metrics, the 14B default, and short `$ref` compile errors.  
 5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen. The 2026-10-06 live runs did not show that double failure. The Cursor branch’s `escalate_after` was not merged.  
-6. **OQ-0017** is open: the next live comparison among Ollama, the home vLLM environment, and Lemonade. Decision 0023 stays the default until a new measurement and a decision.  
+6. **OQ-0017** is open. On 2026-10-07 one home vLLM toy (`Qwen/Qwen2.5-14B-Instruct-AWQ` on `127.0.0.1:8001`) exited 1: `RepairError: subgraph does not consume parent inputs`. Decision 0023 stays the default. Lemonade is still unscored.  
 7. pfy-mentat #279 is merged at catalog stage I2. Publishing on X is still [`ops/x-publishing-handoff.md`](ops/x-publishing-handoff.md). Do not post from this backlog.
 
 **Recently closed:** OQ-0011→0019. Earlier: OQ-0005→0012, OQ-0008→0013, OQ-0009→0014, OQ-0013→0016, OQ-0014→0015, OQ-0015→0017. OQ-0012 → wont-do (Decision 0018). OQ-0007→0011.

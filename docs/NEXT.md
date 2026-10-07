@@ -28,7 +28,7 @@ Do not load `qwen3.6:35b`, a coder-only tag, `deepseek-v4-flash:cloud`, or a 120
 
 Keep that behavior until a live run shows the same region failing twice for a reason a wider parent would fix. Then write a superseding decision before changing `repair_graph`. The Cursor branch’s `escalate_after` was not copied. That branch is `1982c58` and was deleted on 2026-10-07.
 
-[`OQ-0017`](OPEN_QUESTIONS.md) asks whether the next live comparison should stay on Ollama, move to the home vLLM environment, or move to Lemonade. The default stays `qwen2.5:14b` on Ollama until a decision says otherwise.
+[`OQ-0017`](OPEN_QUESTIONS.md) asks whether the next live comparison should stay on Ollama, move to the home vLLM environment, or move to Lemonade. On 2026-10-07 the home vLLM toy ran once and exited 1. Do not load `Qwen/Qwen2.5-14B-Instruct-AWQ` again for that same check. Lemonade is still unscored. The default stays `qwen2.5:14b` on Ollama until a decision says otherwise.
 
 ## 3. pfy-mentat: I2 probe is on `build/local-lane-atg`
 

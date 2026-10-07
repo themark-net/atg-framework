@@ -579,7 +579,7 @@ You can say “R1” and then override individual letters.
 - **Created:** 2026-10-06
 - **Updated:** 2026-10-07
 - **Blocks:** a measured choice of live server after the Ollama default
-- **Blocked-by:** a quiet host and one scored run
+- **Blocked-by:** Lemonade still has no scored toy. The home vLLM toy is scored.
 - **Related-ADR:** Decision 0021, Decision 0023
 - **Related-code:** `src/atg/llm.py` (`OllamaClient`, `OpenAICompatClient`), `examples/toy_parallel.py`
 - **Feature/runbook:** `docs/NEXT.md`, `docs/USING.md` Level 3
@@ -590,7 +590,7 @@ You can say “R1” and then override individual letters.
 
 On 2026-10-06 Lemonade 2026.40.0 was listening on `127.0.0.1:13305` with no model loaded. The NPU is present (`1022:17f0`, `/dev/accel`). `flm:npu` was not installed, so that server was not using the NPU. A GGUF through Lemonade’s llama.cpp backend uses the same iGPU class as Ollama.
 
-On 2026-10-07 `/home/mark/vllm-rocm/.venv` imports `vllm` 0.29.1.dev0 (ROCm 10.1 userspace inside that venv, Python 3.14). This repository has not sent a toy through that server. vLLM uses the 8060S, not the NPU.
+On 2026-10-07 `/home/mark/vllm-rocm/.venv` imports `vllm` 0.29.1.dev0 (ROCm 10.1 userspace inside that venv, Python 3.14). One toy went through that server the same day. The result is in the resolution notes. vLLM uses the 8060S, not the NPU.
 
 **Options:**
 
@@ -598,12 +598,27 @@ On 2026-10-07 `/home/mark/vllm-rocm/.venv` imports `vllm` 0.29.1.dev0 (ROCm 10.1
 2. Serve one 7B–14B checkpoint with the home vLLM venv and run `examples/toy_parallel.py --live --client openai --only`. Judge schema success and sink value.
 3. Point the same command at Lemonade’s OpenAI API after a model is loaded there. The NPU comparison is a separate run that needs `flm:npu` and an FLM model.
 
-**Recommendation:** Keep (1) as the default. The next measurement is one quiet-host toy through `OpenAICompatClient`, either vLLM or Lemonade, not both at once. Do not change `DEFAULT_MODEL` from that run unless it exits 0 with sink value 25 and width at least 2, and a decision says to swap.
+**Recommendation:** Keep (1) as the default. The home vLLM toy ran once on 2026-10-07 and exited 1, short of exit 0, sink value 25, and width at least 2. Do not load that model again for the same check. Lemonade is the remaining unscored option, and it stays a separate run. Do not change `DEFAULT_MODEL` unless a run exits 0 with sink value 25 and width at least 2, and a decision says to swap.
 
 **Resolution notes:**
 
 - **2026-10-06:** Parked while another bench held the GPU. Notes lived only in a stash on `29bca8a`.
-- **2026-10-07:** Restored onto `main`. The 14B Ollama toy has since passed, and the OpenAI client exists. vLLM imports in the home venv and is still unscored.
+- **2026-10-07:** Restored onto `main`. The 14B Ollama toy has since passed, and the OpenAI client exists. vLLM imports in the home venv. The scored run is the next note.
+- **2026-10-07:** One quiet-host toy through home vLLM. `ollama ps` was empty. Server: `vllm` 0.29.1.dev0 in `/home/mark/vllm-rocm/.venv`, model `Qwen/Qwen2.5-14B-Instruct-AWQ`, `127.0.0.1:8001` (port 8000 is NetBox). Flags: `--max-model-len 4096 --gpu-memory-utilization 0.29 --max-num-seqs 1 --dtype float16`. Command, from this repo:
+
+  ```bash
+  ATG_BASE_URL=http://127.0.0.1:8001 \
+    uv run python examples/toy_parallel.py --live --client openai \
+    --model Qwen/Qwen2.5-14B-Instruct-AWQ --only
+  ```
+
+  Wall clock 00:38:33–00:42:05-07:00. Three `POST /v1/chat/completions` returned 200. The engine log reported about 3 tokens/s generation during those calls. Stderr:
+
+  ```text
+  Qwen/Qwen2.5-14B-Instruct-AWQ: RepairError: subgraph does not consume parent inputs: add1.outputs.sum1, mul1.outputs.product1
+  ```
+
+  Exit 1. No success line, so no sink value and no width. `repair.py` raises that `RepairError` when a replacement subgraph fails `assert_interface_preserved`. Host at start: MemAvailable 47533472 kB, SwapFree 4982220 kB, SwapTotal 8388604 kB. At the end: MemAvailable 47087928 kB, SwapFree 4982420 kB. Not a lockup. `DEFAULT_MODEL` stays `qwen2.5:14b`. No decision to swap. The server was stopped after the run. Lemonade was not started.
 
 ---
 
