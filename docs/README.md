@@ -15,5 +15,6 @@
 | [modules/runtime.md](modules/runtime.md) | Compile, execute, thought, repair, local model, JSON |
 | [ops/pfy-mentat-handoff.md](ops/pfy-mentat-handoff.md) | How a later pfy-mentat session decides coupling |
 | [ops/x-publishing-handoff.md](ops/x-publishing-handoff.md) | How a later session publishes the work on X |
+| [ops/HANDOFF-atg-finish-1108.md](ops/HANDOFF-atg-finish-1108.md) | 2026-11-08 finish status: item 1 parked, items 2-4 not started, rerun commands |
 
 **Workflow:** design in ARCHITECTURE → park unknowns in OPEN_QUESTIONS → bind choices in DECISIONS → execute via TODO. Current ordered work is [NEXT.md](NEXT.md). How to run the library is [USING.md](USING.md).

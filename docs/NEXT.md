@@ -2,6 +2,8 @@
 
 Ordered work from 2026-10-05. Phase checkboxes stay in [`TODO.md`](TODO.md). Binding choices stay in [`DECISIONS.md`](DECISIONS.md). How to run the library, by skill level, is [`USING.md`](USING.md).
 
+The 2026-11-08 finish run is [`ops/HANDOFF-atg-finish-1108.md`](ops/HANDOFF-atg-finish-1108.md). Item 1 is parked. Items 2, 3, and 4 did not start. SHAs, the five scored passes, rerun commands, and the open questions are in that note.
+
 The MVP in Decision 0004 is in tree: synthetic tools, a mock model, parallel execution, and localized repair. Version 0.2.0. On 2026-10-06, `uv run pytest -q -m "not integration"` → 40 passed, 1 deselected. The software license is MIT (Decision 0019).
 
 The 2026-10-05 count was 35. The later tests cover the OpenAI-compatible client, the offline PoC, and a short `$ref` rejected before any tool runs (Decision 0024).
@@ -54,7 +56,7 @@ The paper’s benchmark sentences stay attributed to Zhang et al. (2026). This r
 
 ## 5. Stay inside the decisions that already closed scope
 
-- Paper environments (ALFWorld, WebShop, ScienceWorld) stay deferred (Decision 0018, OQ-0012 wont-do).
+- Paper environments (ALFWorld, WebShop, ScienceWorld) stay deferred (Decision 0018, OQ-0012 wont-do). Mark approved an ALFWorld run on 2026-11-08. Item 2 of that finish run did not start, so the approval is not an ADR. Do not install ALFWorld until a superseding decision is written. See the finish handoff linked at the top of this file.
 - Core stays free of LangGraph, DSPy, and NetworkX imports (Decision 0002, Decision 0005, Decision 0016).
 - History stays in memory, with a JSON file when the caller asks. SQLite waits on Decision 0015’s size trigger.
 - The default model is `qwen2.5:14b` (Decision 0023). A larger tag in the sweep does not change it.
