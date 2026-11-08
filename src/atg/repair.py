@@ -110,12 +110,7 @@ def repair_graph(
     for node_id in list(region):
         if node_id in working:
             working.remove_node(node_id)
-    note = None
-    if failures:
-        note = (
-            "This is a repair. Preserve the external interface. "
-            "Previous failures: " + "; ".join(failures)
-        )
+    note = _repair_note(history, interface, failures)
     try:
         subgraph = propose_subgraph(
             interface,
@@ -131,6 +126,61 @@ def repair_graph(
     _insert(working, subgraph, incoming, outgoing)
     history.append(working, "repair")
     return working
+
+
+def _repair_note(history: GraphHistory, interface: TaskNode, failures: list[str]) -> str:
+    """Task sentence plus the parent ``$ref`` strings the replacement must copy.
+
+    The sentence is the caller's original task, from the first snapshot.
+    It is not a field from Zhang et al. The ``$ref`` strings are not rewritten.
+    """
+
+    parts = ["This is a repair. Preserve the external interface."]
+    sentence = _original_task(history)
+    if sentence:
+        parts.append("The original task is: " + sentence)
+    refs = _interface_refs(interface)
+    if refs:
+        producers: list[str] = []
+        for ref in refs:
+            producer = ref.split(".outputs.", 1)[0]
+            if producer not in producers:
+                producers.append(producer)
+        parts.append(
+            "Copy these $ref strings onto child inputs, unchanged: "
+            + ", ".join(refs)
+            + ". Do not create a child whose id is one of these producers: "
+            + ", ".join(producers)
+            + ". A parent $ref does not get an edge."
+        )
+    parts.append("Never emit an edge whose src and dst are the same id.")
+    if failures:
+        parts.append("Previous failures: " + "; ".join(failures))
+    return " ".join(parts)
+
+
+def _original_task(history: GraphHistory) -> str | None:
+    if len(history) == 0:
+        return None
+    first = history[0]
+    if first.reason != "initial" or len(first.nodes) != 1:
+        return None
+    name = first.nodes[0].name.strip()
+    return name or None
+
+
+def _interface_refs(node: TaskNode) -> list[str]:
+    found: list[str] = []
+    seen: set[str] = set()
+    for value in node.inputs.values():
+        parsed = parse_ref(value)
+        if parsed is None:
+            continue
+        text = f"{parsed.node_id}.outputs.{parsed.field}"
+        if text not in seen:
+            seen.add(text)
+            found.append(text)
+    return found
 
 
 def _parent(node_id: str, graph: TaskGraph, history: GraphHistory) -> str | None:

@@ -921,6 +921,35 @@ Rejected alternatives:
 
 ---
 
+## Decision 0027: A self-edge is dropped and an internal `$ref` adds its edge (2026-11-08)
+
+**Status:** Accepted
+
+**Context:** Session 4 (`55de9a6`) scored both local tags after the root example again showed a child `$ref`. `qwen2.5:14b` reached 10/12 on full replan and on sequential replay. Localized repair was 5/12 and used 26 model calls against 20 for full replan. Two localized repairs exhausted the compile budget on a one-node plan whose only edge was that node to itself (`fail_parallel`, `fail_diamond`). The `$ref` on that node named a parent input. `fail_wide` on the same tag compiled a plan that named `join_results.outputs.value` and omitted the edge `join_results -> final_join`. Two retries still omitted it, so no tool ran. `qwen3.6:35b` localized repairs of `fail_chain` and `fail_wide` created child ids that were the producers of the parent `$ref`, so the subgraph did not consume the parent inputs. The repair prompt named the anchor id, not the caller's task sentence, while full replan sends that sentence again. These misses are valid JSON. They are not an Ollama schema rejection and not a short `$ref`.
+
+**Decision:** `_decomposition_graph` drops an edge whose `src` equals `dst`, the same way it drops an edge that names an id outside the child set. When a child input is a `$ref` to another child, and that producer-to-reader edge is absent, the compiler adds it. If the added edge would cycle, the cycle error stands and the compile fix-up runs. A `$ref` string is not rewritten. A `$ref` from a node to itself is still `not an ancestor`. `TaskGraph.add_edge` still rejects a self-loop. `repair_graph` always sends a note. The note includes the original task sentence when the first history snapshot is the single root (`reason` `initial`), the exact parent `$ref` strings that must be copied, and the producer ids that must not be reused as child ids. A parent `$ref` does not get an edge.
+
+**Rationale:** The retry budget on session 4 ended on the same shape it started with. The `$ref` already stated the data flow. Adding the missing edge does not invent a producer. Dropping a self-edge does not invent a `$ref`. The task sentence is what full replan already shows the model. Localized repair was hiding it.
+
+Rejected alternatives:
+
+1. **Send "cycle involving" and "not an ancestor" until the model edits the edge list.** Session 4 did that for two retries. The last plan was still the self-edge, or still missing `join_results -> final_join`.
+2. **Rewrite a short `$ref`, fill empty `declared_outputs`, or replace a self-`$ref` with a literal.** Decision 0024 and Decision 0025. A self-`$ref` stays a compile error.
+3. **Switch the live path to GBNF.** The rejected plans are schema-valid JSON with a bad edge list, or a valid plan with the wrong sink (`diamond` 10 on `qwen3.6:35b`, `diamond` 28 on one `qwen2.5:14b` arm). A grammar does not add the missing edge and does not change those sinks.
+
+**Consequences:**
+
+- A plan that is otherwise a legal subgraph is not rejected only because it also contains a self-edge.
+- A repeated edge in the model's list is skipped. `TaskGraph.add_edge` still rejects a duplicate when a caller adds it directly.
+- An internal `$ref` without an edge compiles, and the reader waits on that producer.
+- A cycle expressed by `$ref`s is still a `CompileError`. No tool runs.
+- The repair note can repeat the caller's task sentence. That sentence is not a paper field.
+- `DEFAULT_MODEL` stays `qwen2.5:14b`. This decision does not close the live bar.
+
+**References:** Decisions 0014, 0024, 0025; Zhang et al. (2026) §4.3 (`zhang2026atg`); `src/atg/planner.py`; `src/atg/repair.py`; `docs/poc/RESULTS.md`.
+
+---
+
 ## How to add a decision
 
 1. Assign next ID (`NNNN` = max + 1, never reuse).  

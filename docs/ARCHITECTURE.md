@@ -361,6 +361,7 @@ Binding detail lives in [`docs/DECISIONS.md`](DECISIONS.md).
 | **0020** | Third-party ATG readings: three behaviors adopted, the rest skipped |
 | **0025** | Planner JSON schema uses the graph `$ref` pattern; compile fix-up is not a repair |
 | **0026** | Ollama `format` inlines `$defs` and does not name a `$ref` property; structured calls set `think` false |
+| **0027** | A self-edge is dropped; an internal `$ref` adds the missing producer edge. `$ref` strings are not rewritten |
 
 The remaining open question is repair escalation (OQ-0016). The live model check is a remeasure of Decision 0017, parked while other jobs use Ollama. History of closed questions is in [`docs/OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md).
 

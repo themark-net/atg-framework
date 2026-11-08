@@ -135,7 +135,7 @@ print(
 
 `MockLLM` pops one scripted `Decomposition` per planner call. Use it when you already know the graph, in tests, and in demos. The parallel graph is `examples/toy_parallel.py`. Copy that file when you want two branches.
 
-To let a model write the graph, pass `OllamaClient` instead of `MockLLM`. The model must return JSON matching `Decomposition`. The system prompt in `src/atg/planner.py` tells it to use registered tool names, set `refine` false on a tool node, copy sink outputs from the parent, and keep the parent id off the edges. Ollama receives a derived JSON schema: `$defs` are inlined, and the schema does not use a property named `$ref`, because llama.cpp treats that key as a schema reference (Decision 0026). The instance still uses `{"$ref": "producer_id.outputs.field"}`. Structured Ollama calls set `think` to false.
+To let a model write the graph, pass `OllamaClient` instead of `MockLLM`. The model must return JSON matching `Decomposition`. The system prompt in `src/atg/planner.py` tells it to use registered tool names, set `refine` false on a tool node, copy sink outputs from the parent, and keep the parent id off the edges. A self-edge is ignored. A `$ref` to another node in the same plan supplies the edge when the model omitted it (Decision 0027). A `$ref` string is not rewritten. Ollama receives a derived JSON schema: `$defs` are inlined, and the schema does not use a property named `$ref`, because llama.cpp treats that key as a schema reference (Decision 0026). The instance still uses `{"$ref": "producer_id.outputs.field"}`. Structured Ollama calls set `think` to false.
 
 `run_task(root, registry, llm, *, runner=None, max_depth=6, max_repairs=2, judge=None)` returns `RunResult`:
 

@@ -16,6 +16,7 @@ from atg.planner import (
     ChildNode,
     CompileError,
     Decomposition,
+    EdgeSpec,
     PlanningNode,
     RefBinding,
     decomposition_gbnf,
@@ -181,6 +182,8 @@ def test_prompt_uses_a_catalog_few_shot_and_credits_the_paper():
     assert "Never emit an id that starts with example_" in system
     assert "two operations to the same value in parallel" in system
     assert "edges includes that child as src" in system
+    assert "src and dst are the same id" in system
+    assert "does not get an edge" in system
     assert example["nodes"][0]["tool_name"] == "add"
     assert example["nodes"][0]["inputs"] == {"a": 1, "b": 2}
     assert example["edges"] == [{"src": "example_src", "dst": "example_dst"}]
@@ -631,3 +634,221 @@ def test_a_transport_error_is_not_retried_as_a_bad_plan():
         compile_task(root, registry, mock, metrics=metrics, max_compile_attempts=3)
     assert mock.calls == 1
     assert metrics.compile_retries == 0
+
+
+def test_a_self_edge_is_dropped_and_the_literal_tool_still_runs():
+    """A node edged to itself is not a cycle once that edge is ignored."""
+
+    called: list[tuple[int, int]] = []
+
+    def add(a: int, b: int) -> dict:
+        called.append((a, b))
+        return {"value": a + b}
+
+    registry = _registry()
+    registry.get("add").fn = add
+    root = TaskNode(id="job", name="Add 2 and 3.", declared_outputs=["value"])
+    spec = Decomposition(
+        nodes=[
+            ChildNode(
+                id="total",
+                name="total",
+                tool_name="add",
+                inputs={"a": 2, "b": 3},
+                declared_outputs=["value"],
+                refine=False,
+            )
+        ],
+        edges=[EdgeSpec(src="total", dst="total")],
+    )
+    graph, _history = compile_task(root, registry, MockLLM([spec]), metrics=Metrics())
+    execute(graph, registry, metrics=Metrics())
+    assert graph.edges() == ()
+    assert graph.get("total").outputs == {"value": 5}
+    assert called == [(2, 3)]
+
+
+def test_an_omitted_edge_still_feeds_the_upstream_value():
+    """The $ref names the producer. The compiler adds the edge the model left out."""
+
+    registry = _registry()
+    root = TaskNode(id="job", name="Add 2 and 3, then add 1.", declared_outputs=["value"])
+    spec = Decomposition(
+        nodes=[
+            ChildNode(
+                id="left",
+                name="left",
+                tool_name="add",
+                inputs={"a": 2, "b": 3},
+                declared_outputs=["value"],
+                refine=False,
+            ),
+            ChildNode(
+                id="right",
+                name="right",
+                tool_name="add",
+                inputs={"a": {"$ref": "left.outputs.value"}, "b": 1},
+                declared_outputs=["value"],
+                refine=False,
+            ),
+        ],
+        edges=[],
+    )
+    graph, _history = compile_task(root, registry, MockLLM([spec]), metrics=Metrics())
+    execute(graph, registry, metrics=Metrics())
+    assert ("left", "right") in graph.edges()
+    assert graph.get("left").outputs == {"value": 5}
+    assert graph.get("right").outputs == {"value": 6}
+
+
+def test_a_ref_cycle_stays_a_compile_error_and_does_not_run_tools():
+    called: list[int] = []
+
+    def add(a: int, b: int) -> dict:
+        called.append(a)
+        return {"value": a + b}
+
+    registry = _registry()
+    registry.get("add").fn = add
+    root = TaskNode(id="job", name="Add 2 and 3.", declared_outputs=["value"])
+    spec = Decomposition(
+        nodes=[
+            ChildNode(
+                id="left",
+                name="left",
+                tool_name="add",
+                inputs={"a": {"$ref": "right.outputs.value"}, "b": 1},
+                declared_outputs=["value"],
+                refine=False,
+            ),
+            ChildNode(
+                id="right",
+                name="right",
+                tool_name="add",
+                inputs={"a": {"$ref": "left.outputs.value"}, "b": 1},
+                declared_outputs=["value"],
+                refine=False,
+            ),
+        ]
+    )
+    with pytest.raises(CompileError, match="cycle involving"):
+        compile_task(root, registry, MockLLM([spec]), metrics=Metrics(), max_compile_attempts=1)
+    assert called == []
+
+
+def test_a_self_ref_is_not_rewritten_and_does_not_run():
+    called: list[int] = []
+
+    def add(a: int, b: int) -> dict:
+        called.append(a)
+        return {"value": a + b}
+
+    registry = _registry()
+    registry.get("add").fn = add
+    root = TaskNode(id="job", name="Add 2 and 3.", declared_outputs=["value"])
+    spec = Decomposition(
+        nodes=[
+            ChildNode(
+                id="total",
+                name="total",
+                tool_name="add",
+                inputs={"a": {"$ref": "total.outputs.value"}, "b": 3},
+                declared_outputs=["value"],
+                refine=False,
+            )
+        ],
+        edges=[EdgeSpec(src="total", dst="total")],
+    )
+    with pytest.raises(CompileError, match="not an ancestor"):
+        compile_task(root, registry, MockLLM([spec]), metrics=Metrics(), max_compile_attempts=1)
+    assert called == []
+
+
+def test_repair_names_the_task_and_keeps_the_parent_ref_past_a_self_edge():
+    """The failed multiply's replacement still reads the frozen sum."""
+
+    calls = {"add": 0, "mul": 0}
+    registry = ToolRegistry()
+
+    def add(a: int, b: int) -> dict:
+        calls["add"] += 1
+        return {"value": a + b}
+
+    def mul(a: int, b: int) -> dict:
+        calls["mul"] += 1
+        if calls["mul"] == 1:
+            raise RuntimeError("boom")
+        return {"value": a * b}
+
+    registry.register(
+        add,
+        name="add",
+        description="Add integers a and b. Returns value.",
+        parameters={
+            "type": "object",
+            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+            "required": ["a", "b"],
+        },
+    )
+    registry.register(
+        mul,
+        name="mul",
+        description="Multiply integers a and b. Returns value.",
+        parameters={
+            "type": "object",
+            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+            "required": ["a", "b"],
+        },
+    )
+    root = TaskNode(
+        id="job",
+        name="Add 2+3, multiply by 4, then add 1.",
+        declared_outputs=["value"],
+    )
+    first = Decomposition(
+        nodes=[
+            ChildNode(
+                id="a_in",
+                name="a_in",
+                tool_name="add",
+                inputs={"a": 2, "b": 3},
+                declared_outputs=["value"],
+                refine=False,
+            ),
+            ChildNode(
+                id="total",
+                name="total",
+                tool_name="mul",
+                inputs={"a": {"$ref": "a_in.outputs.value"}, "b": 4},
+                declared_outputs=["value"],
+                refine=False,
+            ),
+        ],
+        edges=[EdgeSpec(src="a_in", dst="total")],
+    )
+    repair = Decomposition(
+        nodes=[
+            ChildNode(
+                id="total2",
+                name="total2",
+                tool_name="mul",
+                inputs={"a": {"$ref": "a_in.outputs.value"}, "b": 4},
+                declared_outputs=["value"],
+                refine=False,
+            )
+        ],
+        edges=[EdgeSpec(src="total2", dst="total2")],
+    )
+    mock = _Recording([first, repair])
+    result = run_task(root, registry, mock)
+    assert result.graph.get("total2").outputs == {"value": 20}
+    assert result.graph.get("a_in").status == NodeStatus.frozen
+    assert calls == {"add": 1, "mul": 2}
+    assert result.metrics.repairs == 1
+    user = json.loads(mock.seen[1][1]["content"])
+    assert user["note"].startswith("This is a repair.")
+    assert "Add 2+3, multiply by 4, then add 1." in user["note"]
+    assert "a_in.outputs.value" in user["note"]
+    assert "Do not create a child whose id is one of these producers: a_in" in user["note"]
+    assert "example_src" not in mock.seen[1][1]["content"]
+    assert ("total2", "total2") not in result.graph.edges()

@@ -42,6 +42,8 @@ _SYSTEM = (
     "on the parent inputs. Do not name the parent id.\n"
     "- A $ref to another child is valid only when edges includes that child as src "
     "and the reader as dst.\n"
+    "- Never emit an edge whose src and dst are the same id.\n"
+    "- A $ref that names an id already on the parent inputs does not get an edge.\n"
     "- Copy every parent $ref onto some child. Do not invent an external $ref the parent does not have. "
     "Never emit an id that starts with example_. Those ids exist only in the example.\n"
     "- Every sink (a node with no outgoing edge) must list the parent declared_outputs "
@@ -503,10 +505,22 @@ def _decomposition_graph(spec: Decomposition, parent: TaskNode) -> TaskGraph:
             ) from exc
         graph.add_node(node)
     known = {child.id for child in spec.nodes}
+    # Decision 0027. A self-edge is dropped. An internal $ref adds its edge
+    # when the model omitted it. The $ref string is not rewritten.
     for edge in spec.edges:
-        if edge.src not in known or edge.dst not in known:
+        if edge.src not in known or edge.dst not in known or edge.src == edge.dst:
+            continue
+        if edge.dst in graph.successors(edge.src):
             continue
         graph.add_edge(edge.src, edge.dst)
+    for child in spec.nodes:
+        for value in child.inputs.values():
+            producer = _ref_producer_id(value)
+            if producer is None or producer not in known or producer == child.id:
+                continue
+            if child.id in graph.successors(producer):
+                continue
+            graph.add_edge(producer, child.id)
     return graph
 
 
