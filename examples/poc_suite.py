@@ -15,6 +15,7 @@ Independent reimplementation; see docs/ATTRIBUTION.md (``zhang2026atg``).
 import argparse
 import json
 import os
+import subprocess
 import sys
 import time
 from collections.abc import Callable
@@ -567,7 +568,7 @@ def _compile_and_check(
     llm: Any,
     metrics: Metrics,
 ) -> TaskGraph | None:
-    graph, _history = compile_task(root, registry, llm)
+    graph, _history = compile_task(root, registry, llm, metrics=metrics)
     report = thought_experiment(graph, registry, None)
     if not report.ok:
         metrics.notes.extend(report.errors)
@@ -602,12 +603,21 @@ def _global_replan(
     return rebuilt, True
 
 
-def _run_localized(root: TaskNode, registry: ToolRegistry, llm: Any) -> tuple[TaskGraph, Metrics, bool]:
-    result = run_task(root, registry, llm, judge=False)
+def _run_localized(
+    root: TaskNode, registry: ToolRegistry, llm: Any, metrics: Metrics
+) -> tuple[TaskGraph, Metrics, bool]:
+    result = run_task(root, registry, llm, judge=False, metrics=metrics)
     return result.graph, result.metrics, result.thought.ok
 
 
-def _failed_row(task: TaskSpec, llm: _CountingLLM, started: float, exc: Exception) -> dict[str, Any]:
+def _failed_row(
+    task: TaskSpec,
+    llm: _CountingLLM,
+    started: float,
+    exc: Exception,
+    metrics: Metrics,
+) -> dict[str, Any]:
+    retries = metrics.compile_retries or getattr(exc, "compile_retries", 0)
     return {
         "id": task.id,
         "failed_once": task.failed_once,
@@ -619,6 +629,7 @@ def _failed_row(task: TaskSpec, llm: _CountingLLM, started: float, exc: Exceptio
         "tool_calls": 0,
         "nodes_frozen_reused": 0,
         "repairs": 0,
+        "compile_retries": retries,
         "wall_time_s": round(time.perf_counter() - started, 6),
         "max_parallel": 0,
         "error": f"{type(exc).__name__}: {exc}",
@@ -628,11 +639,12 @@ def _failed_row(task: TaskSpec, llm: _CountingLLM, started: float, exc: Exceptio
 def _run_one(task: TaskSpec, arm: str, llm: _CountingLLM) -> dict[str, Any]:
     registry = make_registry(task.failed_once)
     root = TaskNode(id="job", name=task.name, declared_outputs=["value"])
+    metrics = Metrics()
     started = time.perf_counter()
     try:
-        return _run_one_body(task, arm, llm, registry, root, started)
+        return _run_one_body(task, arm, llm, registry, root, started, metrics)
     except (LLMError, CompileError, RepairError, TimeoutError, OSError, ValidationError) as exc:
-        return _failed_row(task, llm, started, exc)
+        return _failed_row(task, llm, started, exc, metrics)
 
 
 def _run_one_body(
@@ -642,15 +654,14 @@ def _run_one_body(
     registry: ToolRegistry,
     root: TaskNode,
     started: float,
+    metrics: Metrics,
 ) -> dict[str, Any]:
     plan_ok = False
     if arm == "localized":
-        graph, metrics, plan_ok = _run_localized(root, registry, llm)
+        graph, metrics, plan_ok = _run_localized(root, registry, llm, metrics)
     elif arm == "global_replan":
-        metrics = Metrics()
         graph, plan_ok = _global_replan(root, registry, llm, metrics)
     elif arm == "sequential":
-        metrics = Metrics()
         graph = _compile_and_check(root, registry, llm, metrics)
         plan_ok = graph is not None
         if graph is None:
@@ -673,6 +684,7 @@ def _run_one_body(
         "tool_calls": metrics.tool_calls,
         "nodes_frozen_reused": metrics.nodes_frozen_reused,
         "repairs": metrics.repairs,
+        "compile_retries": metrics.compile_retries,
         "wall_time_s": round(elapsed, 6),
         "max_parallel": metrics.max_parallel,
     }
@@ -686,27 +698,61 @@ def _summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "tool_calls": sum(row["tool_calls"] for row in rows),
         "nodes_frozen_reused": sum(row["nodes_frozen_reused"] for row in rows),
         "repairs": sum(row["repairs"] for row in rows),
+        "compile_retries": sum(row.get("compile_retries", 0) for row in rows),
         "wall_time_s": round(sum(row["wall_time_s"] for row in rows), 6),
         "max_parallel": max(row["max_parallel"] for row in rows),
         "tasks": rows,
     }
 
 
+def _load_journal(path: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    done: dict[tuple[str, str], dict[str, Any]] = {}
+    if not path.exists():
+        return done
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        done[(row["arm"], row["id"])] = {
+            key: value for key, value in row.items() if key not in ("arm", "model")
+        }
+    return done
+
+
 def run_suite(
     llm_factory: Callable[[TaskSpec, str], _CountingLLM],
     *,
     offline: bool,
+    journal: Path | None = None,
+    model: str | None = None,
 ) -> dict[str, Any]:
-    """Run every task on localized, global_replan, and sequential."""
+    """Run every task on localized, global_replan, and sequential.
 
+    ``journal`` is a JSONL file. A row already present is not run again, so a
+    live sweep can resume after a stop. Each finished task is appended.
+    """
+
+    done = _load_journal(journal) if journal is not None else {}
     rows: dict[str, list[dict[str, Any]]] = {arm: [] for arm in _ARMS}
     for arm in _ARMS:
         for task in TASKS:
-            row = _run_one(task, arm, llm_factory(task, arm))
+            key = (arm, task.id)
+            if key in done:
+                row = done[key]
+            else:
+                row = _run_one(task, arm, llm_factory(task, arm))
+                if journal is not None:
+                    journal.parent.mkdir(parents=True, exist_ok=True)
+                    with journal.open("a", encoding="utf-8") as handle:
+                        handle.write(
+                            json.dumps({"arm": arm, "model": model, **row}, ensure_ascii=False)
+                            + "\n"
+                        )
+                        handle.flush()
             rows[arm].append(row)
             print(
                 f"{arm} {task.id} success={row['success']} plan_ok={row['plan_ok']} "
-                f"llm_calls={row['llm_calls']}",
+                f"llm_calls={row['llm_calls']} compile_retries={row.get('compile_retries', 0)}",
                 flush=True,
             )
     localized = rows["localized"]
@@ -733,20 +779,24 @@ def _markdown(report: dict[str, Any]) -> str:
         "On global replan it counts one whole-graph recompile after a tool failure. "
         "Sequential replay discards outputs and runs the chain again, so its `repairs` stays 0.",
         "",
+        "`compile_retries` counts planner calls after a validator rejection (Decision 0025). "
+        "Those calls are included in `llm_calls` and are not included in `repairs`.",
+        "",
         "`max_parallel` is the widest wave in that arm, not a sum across tasks.",
         "",
-        "| arm | success | llm_calls | tool_calls | nodes_frozen_reused | repairs | wall_time_s | max_parallel |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| arm | success | llm_calls | tool_calls | nodes_frozen_reused | repairs | compile_retries | wall_time_s | max_parallel |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for name, body in report["arms"].items():
         lines.append(
-            "| {arm} | {success} | {llm_calls} | {tool_calls} | {frozen} | {repairs} | {wall:.6f} | {width} |".format(
+            "| {arm} | {success} | {llm_calls} | {tool_calls} | {frozen} | {repairs} | {retries} | {wall:.6f} | {width} |".format(
                 arm=name,
                 success=body["success"],
                 llm_calls=body["llm_calls"],
                 tool_calls=body["tool_calls"],
                 frozen=body["nodes_frozen_reused"],
                 repairs=body["repairs"],
+                retries=body.get("compile_retries", 0),
                 wall=body["wall_time_s"],
                 width=body["max_parallel"],
             )
@@ -830,6 +880,18 @@ def _write_report(report: dict[str, Any], path: Path) -> None:
     path.with_suffix(".md").write_text(_markdown(report), encoding="utf-8")
 
 
+def _git_sha() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=_ROOT,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
 def _live(
     model: str,
     *,
@@ -838,25 +900,49 @@ def _live(
     client_name: str,
     base_url: str | None,
     report_path: str | None,
+    grammar: bool,
 ) -> int:
     models = [model]
     if not only:
         models.extend(name for name in FALLBACK_MODELS if name != model)
     errors: list[str] = []
     for name in models:
+        grammar_text = None
+        if grammar:
+            if client_name != "openai":
+                errors.append(f"{name}: --grammar is the llama-server path; pass --client openai")
+                continue
+            from atg.planner import decomposition_gbnf
+
+            grammar_text = decomposition_gbnf(
+                ["add", "mul", "join", "flaky_add", "flaky_mul"]
+            )
         if client_name == "openai":
-            client = OpenAICompatClient(name, base_url=base_url, timeout_s=180)
+            client = OpenAICompatClient(
+                name, base_url=base_url, timeout_s=180, grammar=grammar_text
+            )
         else:
             client = OllamaClient(name, host=host, timeout_s=180)
+        if report_path:
+            journal = Path(report_path).with_suffix(".jsonl")
+            if len(models) > 1:
+                journal = journal.with_name(f"{journal.stem}-{name}{journal.suffix}")
+        else:
+            safe = name.replace(":", "-").replace("/", "-")
+            journal = _ROOT / "tmp" / "jobs" / f"live-{safe}.jsonl"
 
-        def factory(_task: TaskSpec, _arm: str, _client: OllamaClient = client) -> _CountingLLM:
+        def factory(_task: TaskSpec, _arm: str, _client: Any = client) -> _CountingLLM:
             return _CountingLLM(_client)
 
         try:
-            report = run_suite(factory, offline=False)
+            report = run_suite(factory, offline=False, journal=journal, model=name)
         except Exception as exc:
             errors.append(f"{name}: {type(exc).__name__}: {exc}")
             continue
+        report["model"] = name
+        report["client"] = client_name
+        report["git_sha"] = _git_sha()
+        report["grammar"] = bool(grammar_text)
         print(f"model={name} client={client_name}")
         _print_summary(report)
         if report_path:
@@ -885,6 +971,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--client", choices=("ollama", "openai"), default="ollama")
     parser.add_argument("--base-url", default=os.environ.get("ATG_BASE_URL"))
     parser.add_argument("--report", default=None, help="write a live JSON report to this path")
+    parser.add_argument(
+        "--grammar",
+        action="store_true",
+        help="send a GBNF grammar (OpenAI-compatible llama-server only)",
+    )
     args = parser.parse_args(argv)
     if args.live and args.offline:
         print("pass only one of --live or --offline", file=sys.stderr)
@@ -897,6 +988,7 @@ def main(argv: list[str] | None = None) -> int:
             client_name=args.client,
             base_url=args.base_url,
             report_path=args.report,
+            grammar=args.grammar,
         )
     report = run_offline_suite()
     _print_summary(report)

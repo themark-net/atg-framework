@@ -46,6 +46,23 @@ Token rate was not re-measured. pfy-mentat `docs/dogfood/LOCAL-BENCH-5-RUNTIMES.
 
 `DEFAULT_MODEL` stays `qwen2.5:14b` (Decision 0023). The 14B toy on 2026-10-06 exited 0: sink `{'add_results': {'value': 25}}`, two waves, width 2. This sweep does not change that default.
 
+## Structured-output rerun (started 2026-11-08)
+
+Decision 0025. The planner schema is built from `REF_PATTERN` in `src/atg/types.py` (the same pattern as `parse_ref`). Ollama receives it as `format`. A plan that fails validation is sent back with that error, up to 3 attempts. Those extra calls are `compile_retries`. They are included in `llm_calls` and are not `repairs`. The prompt credits Zhang et al. (2026) and includes one few-shot example taken from the tool catalog.
+
+The scripted suite is unchanged on the comparison that Decision 0022 defined: localized 12/12 and 16 LLM calls, global replan 12/12 and 20, sequential 12/12 and 12, `compile_retries` 0. That is `docs/poc/offline-report.json`.
+
+The live rerun is not in this file yet. The command, under the model lock, is:
+
+```bash
+uv run --inexact python examples/poc_suite.py --live --model qwen2.5:14b --only --report tmp/jobs/live-qwen25-14b.json
+uv run --inexact python examples/poc_suite.py --live --model qwen3.6:35b --only --report tmp/jobs/live-qwen36-35b.json
+```
+
+Both tags were already in `ollama list` (`qwen2.5:14b` id `7cdf5a0187d5`, `qwen3.6:35b` id `a7eb95c53bcf`). No pull. The bar is at least 8/12 success on one tag, and localized `llm_calls` below global replan with success no worse. Until those JSON files are copied here, the measured live result remains the 1/12 table above.
+
+GBNF (`decomposition_gbnf`, `--grammar` with `--client openai`) is implemented for llama-server and was not used for this Ollama rerun.
+
 ## What this repository does not claim
 
 The paper's environment scores are Zhang et al.'s. This run did not execute those environments (Decision 0018). A valid-plan rate of 1/12 on `qwen3.6:35b` is a property of this prompt and this tag on this day. It is not a ranking against GPT-4 or against the paper's 7B–8B agents.

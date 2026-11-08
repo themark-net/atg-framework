@@ -4,7 +4,9 @@ Orchestrates Zhang et al. (2026) §§4.1–4.3. A thought-experiment error
 that names a live node is repaired before execution (paper §4.3). An
 error that names no node is not repaired. The judge stays off unless
 ``judge=True`` or ``ATG_JUDGE=1`` (Decision 0013). ``max_repairs`` counts
-pre-execution and runtime repairs together (Decision 0014). Independent
+pre-execution and runtime repairs together (Decision 0014).
+``max_compile_attempts`` counts planner fix-ups on ``metrics.compile_retries``
+and does not spend ``max_repairs`` (Decision 0025). Independent
 reimplementation; see docs/ATTRIBUTION.md (``zhang2026atg``).
 """
 
@@ -17,7 +19,7 @@ from atg.executor import execute
 from atg.graph import TaskGraph
 from atg.history import GraphHistory
 from atg.metrics import Metrics
-from atg.planner import compile_task
+from atg.planner import DEFAULT_COMPILE_ATTEMPTS, compile_task
 from atg.repair import repair_graph
 from atg.thought import ThoughtReport, thought_experiment
 from atg.tools import ToolRegistry
@@ -54,19 +56,37 @@ def run_task(
     max_depth: int = 6,
     max_repairs: int = 2,
     judge: bool | None = None,
+    metrics: Metrics | None = None,
+    max_compile_attempts: int = DEFAULT_COMPILE_ATTEMPTS,
 ) -> RunResult:
     if judge is None:
         judge = os.environ.get("ATG_JUDGE") == "1"
-    graph, history = compile_task(root, registry, llm, max_depth=max_depth)
+    if metrics is None:
+        metrics = Metrics()
+    graph, history = compile_task(
+        root,
+        registry,
+        llm,
+        max_depth=max_depth,
+        metrics=metrics,
+        max_compile_attempts=max_compile_attempts,
+    )
     judge_llm = llm if judge else None
     report = thought_experiment(graph, registry, judge_llm)
-    metrics = Metrics()
     remaining = max_repairs
     while not report.ok and remaining:
         targets = implicated_ids(report.errors, graph)
         if not targets:
             break
-        graph = repair_graph(graph, history, targets, registry, llm)
+        graph = repair_graph(
+            graph,
+            history,
+            targets,
+            registry,
+            llm,
+            metrics=metrics,
+            max_compile_attempts=max_compile_attempts,
+        )
         remaining -= 1
         metrics.repairs += 1
         report = thought_experiment(graph, registry, judge_llm)
@@ -84,7 +104,15 @@ def run_task(
         ]
         if not failed:
             break
-        graph = repair_graph(graph, history, failed, registry, llm)
+        graph = repair_graph(
+            graph,
+            history,
+            failed,
+            registry,
+            llm,
+            metrics=metrics,
+            max_compile_attempts=max_compile_attempts,
+        )
         metrics.repairs += 1
         execute(graph, registry, runner=runner, metrics=metrics)
     return RunResult(graph=graph, history=history, metrics=metrics, thought=report)

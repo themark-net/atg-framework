@@ -4,7 +4,7 @@ Operator walkthrough, by skill level: [`../USING.md`](../USING.md). Ordered next
 
 **Architecture layer:** Planner, executor, thought experiment, repair (`docs/ARCHITECTURE.md` §5.3)  
 **Code:** `src/atg/planner.py`, `executor.py`, `thought.py`, `repair.py`, `run.py`, `llm.py`, `persist.py`, `integrations/`  
-**Related ADR / Decisions:** 0003, 0007, 0009, 0010, 0011, 0012, 0013, 0014, 0015, 0016, 0017, 0020, 0021
+**Related ADR / Decisions:** 0003, 0007, 0009, 0010, 0011, 0012, 0013, 0014, 0015, 0016, 0017, 0020, 0021, 0025
 
 Paper stages in this layer are Zhang et al. (2026), `zhang2026atg`: §4.1 compilation, §4.2 dependency-aware execution and the thought experiment, §4.3 minimal repair. Independent reimplementation. Policy: `docs/ATTRIBUTION.md`.
 
@@ -31,7 +31,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 | Symptom | Likely cause | Recovery |
 |---------|--------------|----------|
 | `CompileError` depth cap | The model kept emitting non-atomic nodes | Lower the task or raise `max_depth` for one run. The default cap is 6 (Decision 0007). |
-| `CompileError` / `RepairError` interface | The decomposition dropped a parent `$ref` or a sink output | Fix the model output. The graph from before the failed replacement is unchanged. |
+| `CompileError` / `RepairError` interface | The decomposition dropped a parent `$ref` or a sink output, and the compile fix-up budget is spent | The planner already sent the validator text back, up to `max_compile_attempts` (default 3). `metrics.compile_retries` counts those extra calls. `metrics.repairs` does not. The graph from before the failed replacement is unchanged. |
 | `LLMError` | Ollama is down, the tag returned non-JSON, or `OpenAICompatClient` saw an HTTP error, URL error, or socket timeout | Check `ollama list` for the default client. For `--client openai`, check `ATG_BASE_URL`. The live script tries `qwen2.5:14b`, then `gemma4:latest`. |
 | Tool node `failed` after two repairs | The callable raised twice, or a pre-execution repair used the same budget | `RunResult.metrics.repairs` counts both. The cap is `max_repairs` (default 2). |
 | Thought check fails and nothing runs | The error names no live node, often an unscoped judge reason | That is Decision 0020. A named node is repaired before `execute`. |
@@ -48,7 +48,8 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 | `ATG_API_KEY` | environment, read by `OpenAICompatClient` | Optional. When set, send `Authorization: Bearer <key>`. When unset, send no auth header. |
 | `ATG_JUDGE` | environment, `1` enables | One judge call after structural checks pass (Decision 0013). |
 | `max_depth` | `compile_task` / `run_task` argument | Refine cap. Default 6. |
-| `max_repairs` | `run_task` argument | Default 2. |
+| `max_repairs` | `run_task` argument | Default 2. Counts `repair_graph` calls only. |
+| `max_compile_attempts` | `compile_task` / `run_task` / `repair_graph` argument | Default 3, including the first plan (Decision 0025). Extra calls are `metrics.compile_retries`. |
 | `ThreadRunner.max_workers` | constructor | `None` uses the stdlib pool default (Decision 0010). |
 | History JSON | path passed to `save_history` | Not written unless the caller asks (Decision 0015). |
 
@@ -72,13 +73,13 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 
 - `Decomposition`: `{nodes: [{id, name, tool_name, inputs, declared_outputs, refine}], edges: [{src, dst}]}`.
 - `JudgeVerdict`: `{ok, reason}`.
-- `Metrics`: `waves`, `tool_calls`, `max_parallel`, `failures`, `repairs`, `nodes_frozen_reused`, `judge_disagreements`.
+- `Metrics`: `waves`, `tool_calls`, `max_parallel`, `failures`, `repairs`, `compile_retries`, `nodes_frozen_reused`, `judge_disagreements`. `compile_retries` is the planner fix-up (Decision 0025), not an execution repair.
 - Tool return: a dict is stored as outputs. A scalar is stored under the single `declared_outputs` name, or under `result`.
 
 ### Callers / callees
 
 - `run_task` calls compile, thought, repair, and execute. Thought repairs that name a node run before execute (Decision 0020).
-- `compile_task` and `repair_graph` call `complete_structured` and `assert_interface_preserved`.
+- `compile_task` and `repair_graph` call `propose_subgraph`, which calls `complete_structured` with `planning_model` and then `assert_interface_preserved`. A validator failure is sent back until `max_compile_attempts`.
 - `execute` calls `mark_ready`, `transition`, and the runner. It does not call the LLM.
 - Adapters call `run_task` only. They do not import LangGraph or DSPy.
 

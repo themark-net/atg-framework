@@ -16,6 +16,7 @@ class Metrics(BaseModel):
     max_parallel: int = 0
     failures: int = 0
     repairs: int = 0
+    compile_retries: int = 0
     nodes_frozen_reused: int = 0
     judge_disagreements: int = 0
     notes: list[str] = Field(default_factory=list)

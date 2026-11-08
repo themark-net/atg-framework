@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from atg import LLMError, OpenAICompatClient
-from atg.planner import Decomposition
+from atg.planner import Decomposition, planning_model
 
 _ROOT = Path(__file__).resolve().parents[1]
 _SPEC = importlib.util.spec_from_file_location("toy_parallel", _ROOT / "examples" / "toy_parallel.py")
@@ -117,11 +117,15 @@ def test_malformed_reply_is_retried_once_and_is_not_the_graph():
     assert first["model"] == "llama3.1:8b"
     assert first["temperature"] == 0
     assert first["stream"] is False
+    expected = planning_model(
+        tuple(toy_parallel.registry().names()),
+        require_declared_output=True,
+    )
     assert first["response_format"] == {
         "type": "json_schema",
         "json_schema": {
-            "name": "Decomposition",
-            "schema": Decomposition.model_json_schema(),
+            "name": expected.__name__,
+            "schema": expected.model_json_schema(),
         },
     }
     assert "response_format" not in second

@@ -1,9 +1,11 @@
 """Model port. Core stays free of vendor SDKs (Decision 0003).
 
 Structured subgraphs are JSON that validates as ``Decomposition``
-(Decision 0012). ``OllamaClient`` talks to a local daemon with the
-stdlib. ``OpenAICompatClient`` posts to ``/v1/chat/completions``
-(Decision 0021). ``LiteLLMClient`` is the optional multi-provider adapter.
+(Decision 0012). The planner passes a schema built from the graph
+``$ref`` pattern (Decision 0025). ``OllamaClient`` sends that schema as
+Ollama ``format``. ``OpenAICompatClient`` sends it as ``response_format``
+and can send a GBNF ``grammar`` instead (Decision 0021, Decision 0025).
+``LiteLLMClient`` is the optional multi-provider adapter.
 Independent reimplementation of the ATG planner's model boundary;
 see docs/ATTRIBUTION.md (``zhang2026atg``).
 """
@@ -50,7 +52,13 @@ class MockLLM:
         if isinstance(item, schema):
             return item
         if isinstance(item, BaseModel):
-            return schema.model_validate(item.model_dump())
+            try:
+                return schema.model_validate(item.model_dump(by_alias=True))
+            except ValidationError:
+                # A scripted Decomposition the planning schema rejects (short
+                # $ref, unknown tool) is returned as written. JSON from a live
+                # model is still validated above or via model_validate_json.
+                return item
         if isinstance(item, str):
             return schema.model_validate_json(item)
         return schema.model_validate(item)
@@ -120,6 +128,7 @@ class OpenAICompatClient:
         base_url: str | None = None,
         api_key: str | None = None,
         timeout_s: float = 120,
+        grammar: str | None = None,
     ) -> None:
         self.model = model or os.environ.get("ATG_MODEL", DEFAULT_MODEL)
         self.base_url = (
@@ -128,6 +137,7 @@ class OpenAICompatClient:
         key = api_key if api_key is not None else os.environ.get("ATG_API_KEY")
         self.api_key = key or None
         self.timeout_s = timeout_s
+        self.grammar = grammar or None
 
     def complete(self, messages: list[dict], **kwargs: Any) -> str:
         return self._content(messages, response_format=None)
@@ -179,7 +189,9 @@ class OpenAICompatClient:
             "temperature": 0,
             "stream": False,
         }
-        if response_format is not None:
+        if self.grammar:
+            payload["grammar"] = self.grammar
+        elif response_format is not None:
             payload["response_format"] = response_format
         data = json.dumps(payload).encode()
         headers = {"Content-Type": "application/json"}

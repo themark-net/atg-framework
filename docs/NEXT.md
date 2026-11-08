@@ -6,6 +6,12 @@ The MVP in Decision 0004 is in tree: synthetic tools, a mock model, parallel exe
 
 The 2026-10-05 count was 35. The later tests cover the OpenAI-compatible client, the offline PoC, and a short `$ref` rejected before any tool runs (Decision 0024).
 
+## 0. Valid plans from local models (in progress, 2026-11-08)
+
+Decision 0025. The 2026-10-06 `qwen3.6:35b` suite was 1/12 valid plans, so repair never ran. The planner now sends a JSON schema built from the graph `$ref` pattern and, when validation fails, sends that error back for up to 3 plans. Extra calls are `metrics.compile_retries`, not `repairs`.
+
+The live check is `examples/poc_suite.py --live --only` on `qwen2.5:14b` and on `qwen3.6:35b`, under the model lock. The bar is at least 8/12 on one of those tags, and localized repair must use fewer model calls than full replan with success no worse. Record the table in `docs/poc/RESULTS.md`. Do not mark the bar met until those numbers are in the file. `DEFAULT_MODEL` stays `qwen2.5:14b`.
+
 ## 1. Live toy remeasure — done 2026-10-06
 
 `uv run python examples/toy_parallel.py --live --model qwen2.5:14b --only` exited 0: `waves=2 parallel=2` and sink `value` 25 (`add_results`). Decision 0023 sets `DEFAULT_MODEL` to `qwen2.5:14b` and supersedes Decision 0017.

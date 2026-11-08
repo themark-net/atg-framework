@@ -853,7 +853,42 @@ Rejected alternatives:
 - Callers that already catch `CompileError` keep going. `ValidationError` is still caught at the PoC boundary so a later escape does not abort a live sweep.  
 - This does not add a second model retry on the Ollama client.
 
+**See also:** Decision 0025. The planner may send the validator error back and ask for a corrected plan. `OllamaClient` itself still does not retry. A short `$ref` is still not rewritten.
+
 **References:** Decisions 0006, 0012, 0014; `src/atg/planner.py`; `examples/poc_suite.py`.
+
+---
+
+## Decision 0025: Planner schema from the graph model, with a bounded compile fix-up (2026-11-08)
+
+**Status:** Accepted
+
+**Context:** On 2026-10-06, `qwen3.6:35b` produced a valid plan on 1 of 12 toy tasks (`docs/poc/RESULTS.md`). The other 11 were rejected before any tool ran, so localized repair never started. The failures were empty `declared_outputs`, a `$ref` that was not `node_id.outputs.field`, or a `$ref` whose producer was not an ancestor. `OllamaClient` already sent `Decomposition.model_json_schema()` as `format`, but `inputs` was an open object, so the schema did not carry the graph's `$ref` pattern. Decision 0012 left constrained decoding to whatever the model port already did. Decision 0024 records a bad plan as `CompileError` and does not retry inside `OllamaClient`.
+
+**Decision:** The planner asks for JSON that matches a Pydantic model built from `PlanningNode` and `RefBinding`. `RefBinding`'s pattern is `REF_PATTERN` in `src/atg/types.py`, the same pattern `parse_ref` uses. `tool_name` is one of the registry names, or null. When the parent declares outputs, each child must declare at least one. `OllamaClient` sends that schema as `format`. `OpenAICompatClient` sends it as `response_format` (`json_schema`). An optional GBNF string from `decomposition_gbnf` uses `ID_HEAD` and `ID_TAIL` from the same module. `OpenAICompatClient(grammar=...)` sends that string as `grammar` and does not send `response_format`. That path is for llama-server. The default live client stays Ollama with JSON schema.
+
+When a plan fails schema validation, graph validation, or interface checks, the planner sends the validator text back and asks for a corrected plan. The budget is `max_compile_attempts` (default 3, including the first plan). Extra calls increment `Metrics.compile_retries`. They do not increment `Metrics.repairs`. A transport failure is not retried. After the budget, `compile_task` raises `CompileError` and `repair_graph` raises `RepairError`. A short `$ref` is not rewritten.
+
+The planner prompt states the typing rules, includes one few-shot example whose tool name and parameter names come from the registry, and credits Zhang et al. (2026).
+
+**Rationale:** The 1/12 run failed on shape, not on tool execution. A schema that shares the graph pattern cannot drift from `parse_ref`. A bounded fix-up gives the model the exact error (empty sink outputs, a bad `$ref`, a missing edge) without treating that call as an execution repair. Counting the two separately keeps the localized-versus-replan comparison readable.
+
+Rejected alternatives:
+
+1. **Hand-written JSON schema or GBNF kept beside the graph model.** The `$ref` rule would diverge the next time `parse_ref` changes. The schema is generated from the same patterns.
+2. **Retry inside `OllamaClient` only.** Decision 0024 left the client without a retry. A client retry cannot attach the interface error, and it would hide the count inside the transport. The planner owns the fix-up.
+3. **Rewrite a short `$ref` or fill empty `declared_outputs` in code.** That inflates the valid-plan rate. Decision 0024 rejected the rewrite. The model has to emit a valid plan.
+4. **Make GBNF the default and start llama-server for the Ollama tags.** The tags already answer Ollama `/api/chat`. JSON schema is the path those servers enforce. Grammar stays available for an OpenAI-compatible server.
+
+**Consequences:**
+
+- Core still does not import LangGraph, DSPy, NetworkX, or a llama.cpp package. The grammar is a string.
+- `metrics.repairs` remains the execution-repair count from Decision 0014. `metrics.compile_retries` is only the planner fix-up.
+- `examples/poc_suite.py --grammar` requires `--client openai`. Ollama runs do not send `grammar`.
+- A live transport error still fails that attempt immediately.
+- `DEFAULT_MODEL` stays `qwen2.5:14b` (Decision 0023). This decision does not change it.
+
+**References:** Decisions 0002, 0003, 0012, 0014, 0021, 0023, 0024; Zhang et al. (2026) §4.1 (`zhang2026atg`); `src/atg/types.py`; `src/atg/planner.py`; `src/atg/llm.py`; `docs/poc/RESULTS.md`.
 
 ---
 

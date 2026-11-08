@@ -13,10 +13,15 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-_NODE_ID = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
-_REF = re.compile(
-    r"^(?P<node>[A-Za-z_][A-Za-z0-9_-]*)\.outputs\.(?P<field>[A-Za-z_][A-Za-z0-9_-]*)$"
-)
+# Shared with the planner JSON schema and the optional GBNF grammar (Decision 0025).
+# JSON Schema patterns are ECMA-262, so these strings have no named groups.
+ID_HEAD = "A-Za-z_"
+ID_TAIL = "A-Za-z0-9_-"
+ID_PATTERN = rf"^[{ID_HEAD}][{ID_TAIL}]*$"
+REF_PATTERN = rf"^[{ID_HEAD}][{ID_TAIL}]*\.outputs\.[{ID_HEAD}][{ID_TAIL}]*$"
+
+_NODE_ID = re.compile(ID_PATTERN)
+_REF = re.compile(REF_PATTERN)
 
 
 class NodeStatus(str, Enum):
@@ -47,10 +52,10 @@ def parse_ref(value: Any) -> Ref | None:
     raw = value["$ref"]
     if not isinstance(raw, str):
         raise ValueError("$ref must be a string")
-    match = _REF.match(raw)
-    if not match:
+    if _REF.fullmatch(raw) is None:
         raise ValueError("$ref must look like node_id.outputs.field")
-    return Ref(node_id=match.group("node"), field=match.group("field"))
+    node_id, field = raw.split(".outputs.", 1)
+    return Ref(node_id=node_id, field=field)
 
 
 class TaskNode(BaseModel):

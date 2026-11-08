@@ -6,13 +6,15 @@ Localized repair is the product path (Decision 0014). Global replan and sequenti
 
 `repairs` on localized counts `repair_graph` calls. On global replan it counts one whole-graph recompile after a tool failure. Sequential replay discards outputs and runs the chain again, so its `repairs` stays 0.
 
+`compile_retries` counts planner calls after a validator rejection (Decision 0025). Those calls are included in `llm_calls` and are not included in `repairs`.
+
 `max_parallel` is the widest wave in that arm, not a sum across tasks.
 
-| arm | success | llm_calls | tool_calls | nodes_frozen_reused | repairs | wall_time_s | max_parallel |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| localized | 12 | 16 | 37 | 6 | 4 | 0.009234 | 3 |
-| global_replan | 12 | 20 | 43 | 0 | 4 | 0.009135 | 3 |
-| sequential | 12 | 12 | 43 | 0 | 0 | 0.002538 | 1 |
+| arm | success | llm_calls | tool_calls | nodes_frozen_reused | repairs | compile_retries | wall_time_s | max_parallel |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| localized | 12 | 16 | 37 | 6 | 4 | 0 | 0.012561 | 3 |
+| global_replan | 12 | 20 | 43 | 0 | 4 | 0 | 0.007015 | 3 |
+| sequential | 12 | 12 | 43 | 0 | 0 | 0 | 0.002345 | 1 |
 
 Check: localized llm_calls (16) < global_replan llm_calls (20) is true.
 Check: sequential max_parallel is 1.

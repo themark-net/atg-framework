@@ -12,7 +12,8 @@
       "tool_calls": 37,
       "nodes_frozen_reused": 6,
       "repairs": 4,
-      "wall_time_s": 0.009234,
+      "compile_retries": 0,
+      "wall_time_s": 0.012561,
       "max_parallel": 3,
       "tasks": [
         {
@@ -26,7 +27,8 @@
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000619,
+          "compile_retries": 0,
+          "wall_time_s": 0.002014,
           "max_parallel": 1
         },
         {
@@ -40,7 +42,8 @@
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000338,
+          "compile_retries": 0,
+          "wall_time_s": 0.000315,
           "max_parallel": 1
         },
         {
@@ -54,7 +57,8 @@
           "tool_calls": 2,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000781,
+          "compile_retries": 0,
+          "wall_time_s": 0.000595,
           "max_parallel": 1
         },
         {
@@ -68,7 +72,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000785,
+          "compile_retries": 0,
+          "wall_time_s": 0.000532,
           "max_parallel": 2
         },
         {
@@ -82,7 +87,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.00075,
+          "compile_retries": 0,
+          "wall_time_s": 0.000561,
           "max_parallel": 2
         },
         {
@@ -96,7 +102,8 @@
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000646,
+          "compile_retries": 0,
+          "wall_time_s": 0.000778,
           "max_parallel": 2
         },
         {
@@ -110,7 +117,8 @@
           "tool_calls": 5,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000774,
+          "compile_retries": 0,
+          "wall_time_s": 0.000775,
           "max_parallel": 3
         },
         {
@@ -124,7 +132,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000504,
+          "compile_retries": 0,
+          "wall_time_s": 0.00076,
           "max_parallel": 1
         },
         {
@@ -138,7 +147,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 1,
           "repairs": 1,
-          "wall_time_s": 0.000867,
+          "compile_retries": 0,
+          "wall_time_s": 0.002135,
           "max_parallel": 2
         },
         {
@@ -152,7 +162,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 1,
           "repairs": 1,
-          "wall_time_s": 0.000878,
+          "compile_retries": 0,
+          "wall_time_s": 0.000959,
           "max_parallel": 1
         },
         {
@@ -166,7 +177,8 @@
           "tool_calls": 4,
           "nodes_frozen_reused": 2,
           "repairs": 1,
-          "wall_time_s": 0.000984,
+          "compile_retries": 0,
+          "wall_time_s": 0.002027,
           "max_parallel": 2
         },
         {
@@ -180,7 +192,8 @@
           "tool_calls": 5,
           "nodes_frozen_reused": 2,
           "repairs": 1,
-          "wall_time_s": 0.001308,
+          "compile_retries": 0,
+          "wall_time_s": 0.00111,
           "max_parallel": 3
         }
       ]
@@ -192,7 +205,8 @@
       "tool_calls": 43,
       "nodes_frozen_reused": 0,
       "repairs": 4,
-      "wall_time_s": 0.009135,
+      "compile_retries": 0,
+      "wall_time_s": 0.007015,
       "max_parallel": 3,
       "tasks": [
         {
@@ -206,7 +220,8 @@
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000275,
+          "compile_retries": 0,
+          "wall_time_s": 0.000193,
           "max_parallel": 1
         },
         {
@@ -220,7 +235,8 @@
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000181,
+          "compile_retries": 0,
+          "wall_time_s": 0.000164,
           "max_parallel": 1
         },
         {
@@ -234,7 +250,8 @@
           "tool_calls": 2,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.00039,
+          "compile_retries": 0,
+          "wall_time_s": 0.00037,
           "max_parallel": 1
         },
         {
@@ -248,7 +265,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000398,
+          "compile_retries": 0,
+          "wall_time_s": 0.000361,
           "max_parallel": 2
         },
         {
@@ -262,7 +280,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000499,
+          "compile_retries": 0,
+          "wall_time_s": 0.000348,
           "max_parallel": 2
         },
         {
@@ -276,7 +295,8 @@
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000611,
+          "compile_retries": 0,
+          "wall_time_s": 0.000488,
           "max_parallel": 2
         },
         {
@@ -290,7 +310,8 @@
           "tool_calls": 5,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000801,
+          "compile_retries": 0,
+          "wall_time_s": 0.000755,
           "max_parallel": 3
         },
         {
@@ -304,7 +325,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000948,
+          "compile_retries": 0,
+          "wall_time_s": 0.000427,
           "max_parallel": 1
         },
         {
@@ -318,7 +340,8 @@
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 1,
-          "wall_time_s": 0.001193,
+          "compile_retries": 0,
+          "wall_time_s": 0.000754,
           "max_parallel": 2
         },
         {
@@ -332,7 +355,8 @@
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 1,
-          "wall_time_s": 0.001228,
+          "compile_retries": 0,
+          "wall_time_s": 0.000869,
           "max_parallel": 1
         },
         {
@@ -346,7 +370,8 @@
           "tool_calls": 6,
           "nodes_frozen_reused": 0,
           "repairs": 1,
-          "wall_time_s": 0.001271,
+          "compile_retries": 0,
+          "wall_time_s": 0.001041,
           "max_parallel": 2
         },
         {
@@ -360,7 +385,8 @@
           "tool_calls": 7,
           "nodes_frozen_reused": 0,
           "repairs": 1,
-          "wall_time_s": 0.00134,
+          "compile_retries": 0,
+          "wall_time_s": 0.001245,
           "max_parallel": 3
         }
       ]
@@ -372,7 +398,8 @@
       "tool_calls": 43,
       "nodes_frozen_reused": 0,
       "repairs": 0,
-      "wall_time_s": 0.002538,
+      "compile_retries": 0,
+      "wall_time_s": 0.002345,
       "max_parallel": 1,
       "tasks": [
         {
@@ -386,7 +413,8 @@
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000112,
+          "compile_retries": 0,
+          "wall_time_s": 0.000108,
           "max_parallel": 1
         },
         {
@@ -400,7 +428,8 @@
           "tool_calls": 1,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 9e-05,
+          "compile_retries": 0,
+          "wall_time_s": 8.1e-05,
           "max_parallel": 1
         },
         {
@@ -414,7 +443,8 @@
           "tool_calls": 2,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000146,
+          "compile_retries": 0,
+          "wall_time_s": 0.000128,
           "max_parallel": 1
         },
         {
@@ -428,7 +458,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000199,
+          "compile_retries": 0,
+          "wall_time_s": 0.000161,
           "max_parallel": 1
         },
         {
@@ -442,7 +473,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000188,
+          "compile_retries": 0,
+          "wall_time_s": 0.000156,
           "max_parallel": 1
         },
         {
@@ -456,7 +488,8 @@
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000262,
+          "compile_retries": 0,
+          "wall_time_s": 0.000228,
           "max_parallel": 1
         },
         {
@@ -470,7 +503,8 @@
           "tool_calls": 5,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000301,
+          "compile_retries": 0,
+          "wall_time_s": 0.000306,
           "max_parallel": 1
         },
         {
@@ -484,7 +518,8 @@
           "tool_calls": 3,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000187,
+          "compile_retries": 0,
+          "wall_time_s": 0.000237,
           "max_parallel": 1
         },
         {
@@ -498,7 +533,8 @@
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000218,
+          "compile_retries": 0,
+          "wall_time_s": 0.000216,
           "max_parallel": 1
         },
         {
@@ -512,7 +548,8 @@
           "tool_calls": 4,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000215,
+          "compile_retries": 0,
+          "wall_time_s": 0.000193,
           "max_parallel": 1
         },
         {
@@ -526,7 +563,8 @@
           "tool_calls": 6,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000293,
+          "compile_retries": 0,
+          "wall_time_s": 0.000255,
           "max_parallel": 1
         },
         {
@@ -540,7 +578,8 @@
           "tool_calls": 7,
           "nodes_frozen_reused": 0,
           "repairs": 0,
-          "wall_time_s": 0.000327,
+          "compile_retries": 0,
+          "wall_time_s": 0.000276,
           "max_parallel": 1
         }
       ]

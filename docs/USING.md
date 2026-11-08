@@ -234,12 +234,14 @@ dspy_forward = as_dspy_forward(root, registry, llm)
 
 | Name | Where | Purpose |
 |------|--------|---------|
-| `ATG_MODEL` | Environment. `OllamaClient` and `LiteLLMClient` read it. | Tag. Default `llama3.1:8b` in `src/atg/llm.py`. |
-| `ATG_OLLAMA_HOST` | Environment | Default `http://127.0.0.1:11434`. |
+| `ATG_MODEL` | Environment. `OllamaClient`, `OpenAICompatClient`, and `LiteLLMClient` read it. | Tag. Default `qwen2.5:14b` in `src/atg/llm.py` (Decision 0023). |
+| `ATG_OLLAMA_HOST` | Environment | Default `http://127.0.0.1:11434`. Do not point this at llama-server or vLLM. |
+| `ATG_BASE_URL` | Environment. `OpenAICompatClient` reads it. | OpenAI-compatible root. Default `http://127.0.0.1:8000`. |
 | `ATG_JUDGE` | Environment. `1` turns the judge on. | One judge call after structural checks pass. |
 | `ATG_RUN_INTEGRATION` | Environment. `1` enables the pytest mark. | Default pytest does not contact Ollama. |
 | `max_depth` | `run_task` / `compile_task` argument | Default 6. |
-| `max_repairs` | `run_task` argument | Default 2. |
+| `max_repairs` | `run_task` argument | Default 2. Execution repairs only. |
+| `max_compile_attempts` | `run_task` / `compile_task` argument | Default 3, including the first plan. Extra calls are `metrics.compile_retries` (Decision 0025). |
 | History path | Argument to `save_history` | Nothing is written until you call it. |
 
 ## Failure modes
@@ -247,7 +249,7 @@ dspy_forward = as_dspy_forward(root, registry, llm)
 | What you see | What to do |
 |--------------|------------|
 | `CompileError` about depth | The model kept returning a non-atomic node. Simplify the task, or raise `max_depth` for that call. |
-| `CompileError` or `RepairError` about the interface | A child dropped a parent `$ref`, or a sink omitted a declared output. The graph from before the failed replacement is unchanged. |
+| `CompileError` or `RepairError` about the interface | A child dropped a parent `$ref`, or a sink omitted a declared output, after the compile fix-up budget. The graph from before the failed replacement is unchanged. `metrics.compile_retries` is not `metrics.repairs`. |
 | `LLMError` | The daemon is down, or the tag returned JSON that is not a `Decomposition`. `ollama list` shows whether the tag is installed. |
 | Thought check fails and no tool runs | The error text does not start with a live node id. An unscoped judge reason does not select a repair region (Decision 0020). |
 | `metrics.repairs` hits 2 and a node is still `failed` | The repair budget is spent. Read `graph.get(node_id).error`. |

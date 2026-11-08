@@ -11,14 +11,18 @@ from typing import Any
 
 from atg.graph import GraphError, TaskGraph
 from atg.history import GraphHistory
-from atg.planner import Decomposition, _decomposition_graph, _messages
+from atg.metrics import Metrics
+from atg.planner import DEFAULT_COMPILE_ATTEMPTS, CompileError, propose_subgraph
 from atg.tools import ToolRegistry
 from atg.types import NodeStatus, TaskNode, parse_ref
-from atg.validation import InterfaceError, assert_interface_preserved
 
 
 class RepairError(Exception):
     """Repair could not produce a graph that preserves the broken region."""
+
+    def __init__(self, message: str, *, compile_retries: int = 0) -> None:
+        super().__init__(message)
+        self.compile_retries = compile_retries
 
 
 def lineage(node_id: str, graph: TaskGraph, history: GraphHistory) -> list[str]:
@@ -81,6 +85,9 @@ def repair_graph(
     failed: list[str],
     registry: ToolRegistry,
     llm: Any,
+    *,
+    metrics: Metrics | None = None,
+    max_compile_attempts: int = DEFAULT_COMPILE_ATTEMPTS,
 ) -> TaskGraph:
     """Copy, freeze successes outside the region, replace the region, snapshot."""
 
@@ -109,14 +116,17 @@ def repair_graph(
             "This is a repair. Preserve the external interface. "
             "Previous failures: " + "; ".join(failures)
         )
-    spec = llm.complete_structured(
-        _messages(interface, registry, note=note), Decomposition
-    )
-    subgraph = _decomposition_graph(spec, interface)
     try:
-        assert_interface_preserved(interface, subgraph)
-    except InterfaceError as exc:
-        raise RepairError(str(exc)) from exc
+        subgraph = propose_subgraph(
+            interface,
+            registry,
+            llm,
+            note=note,
+            metrics=metrics,
+            max_attempts=max_compile_attempts,
+        )
+    except CompileError as exc:
+        raise RepairError(str(exc), compile_retries=exc.compile_retries) from exc
     _insert(working, subgraph, incoming, outgoing)
     history.append(working, "repair")
     return working

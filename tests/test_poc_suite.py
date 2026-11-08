@@ -89,3 +89,20 @@ def test_one_bad_ref_fails_that_task_and_the_next_task_still_runs():
     assert localized[1]["success"] is True
     assert report["arms"]["global_replan"]["tasks"][0]["tool_calls"] == 0
     assert report["arms"]["sequential"]["tasks"][0]["tool_calls"] == 0
+
+
+def test_journal_does_not_call_the_model_for_a_finished_task(tmp_path):
+    suite = _load()
+    journal = tmp_path / "live.jsonl"
+    first = suite.run_suite(suite._offline_llm, offline=True, journal=journal)
+    calls = {"n": 0}
+
+    def factory(task, arm):
+        calls["n"] += 1
+        raise AssertionError(f"resumed {arm} {task.id}")
+
+    second = suite.run_suite(factory, offline=True, journal=journal)
+    assert calls["n"] == 0
+    assert second["arms"]["localized"]["success"] == 12
+    assert second["arms"]["localized"]["llm_calls"] == first["arms"]["localized"]["llm_calls"]
+    assert second["arms"]["global_replan"]["llm_calls"] > second["arms"]["localized"]["llm_calls"]
