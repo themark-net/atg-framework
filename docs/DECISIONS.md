@@ -890,6 +890,35 @@ Rejected alternatives:
 
 **References:** Decisions 0002, 0003, 0012, 0014, 0021, 0023, 0024; Zhang et al. (2026) §4.1 (`zhang2026atg`); `src/atg/types.py`; `src/atg/planner.py`; `src/atg/llm.py`; `docs/poc/RESULTS.md`.
 
+**See also:** Decision 0026. The Ollama `format` body is this schema with `$defs` inlined and with no property named `$ref`. Structured calls set `think` false. `OpenAICompatClient` still sends the full Pydantic schema.
+
+---
+
+## Decision 0026: Ollama format omits a `$ref` property and disables thinking (2026-11-08)
+
+**Status:** Accepted
+
+**Context:** The first Decision 0025 live sweep returned HTTP 400 for every plan. Ollama 0.30.8 forwarded llama-server's message: `json_schema: type must be string, but is object`. `qwen2.5:14b` failed in about 100ms, before a plan was produced. `qwen3.6:35b` decoded about a thousand thinking tokens and then failed with the same message. The planning schema is valid JSON Schema. `RefBinding` has a property whose name is `$ref` and whose value is an object. llama.cpp treats every `$ref` key as a schema reference and requires that value to be a string. A copy of the schema with that property removed was accepted by `qwen2.5:14b` and returned a plan. The original schema was accepted by `qwen3.6:35b` when the request set `think` to false.
+
+**Decision:** `OllamaClient.complete_structured` sends `ollama_format_schema` as `format`, not the raw Pydantic schema. That function inlines `$defs` and, where a property is named `$ref`, removes the key and sets `additionalProperties` to that property's schema. The instance may still contain `{"$ref": "producer_id.outputs.field"}`. The Pydantic model and `parse_ref` still require `REF_PATTERN`. Structured Ollama calls also set `think` to false so the JSON is in `message.content`. `complete` does not set `think`. `OpenAICompatClient` still sends the full Pydantic schema as `response_format`. An HTTP error from Ollama includes a truncated response body on `LLMError`. A transport error is still not a compile retry.
+
+**Rationale:** The 0/12 score measured a schema the server refuses to compile, not the model's plans. The graph binding stays `$ref` because Decision 0007 and `parse_ref` already use that spelling. The wire schema can avoid the keyword without changing the instance. Thinking has to be off for structured calls because qwen3 spends the decode on the thinking channel and Ollama then fails the schema step.
+
+Rejected alternatives:
+
+1. **Rename the instance key away from `$ref`.** `parse_ref`, the prompt, and stored plans would all change. Decision 0024 already refused to rewrite short refs. The wire schema can omit the name while the model still emits it.
+2. **Make GBNF the default for these tags.** Decision 0025 kept grammar on the OpenAI-compatible path. Both tags already answer Ollama `/api/chat`. A schema the server accepts is the smaller change.
+3. **Retry the HTTP 400 as a bad plan.** The same schema fails again. Decision 0025 does not retry transport errors. The client has to send a schema llama.cpp can compile.
+
+**Consequences:**
+
+- A later schema that adds a property named `$ref` must go through `ollama_format_schema` before it is used as Ollama `format`.
+- OpenAI-compatible servers still receive the property named `$ref`. Do not point `ATG_OLLAMA_HOST` at those servers.
+- `metrics.compile_retries` is unchanged. A 400 is still one failed call.
+- `DEFAULT_MODEL` stays `qwen2.5:14b`.
+
+**References:** Decision 0025; `src/atg/llm.py`; `docs/poc/RESULTS.md`.
+
 ---
 
 ## How to add a decision

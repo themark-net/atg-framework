@@ -52,14 +52,16 @@ Decision 0025. The planner schema is built from `REF_PATTERN` in `src/atg/types.
 
 The scripted suite is unchanged on the comparison that Decision 0022 defined: localized 12/12 and 16 LLM calls, global replan 12/12 and 20, sequential 12/12 and 12, `compile_retries` 0. That is `docs/poc/offline-report.json`.
 
-The live rerun is not in this file yet. The command, under the model lock, is:
+First live pass, git `940d0caad3c3cd2c65def2cbc7838860d04f84ef`, Ollama 0.30.8. Both tags were already installed (`qwen2.5:14b` id `7cdf5a0187d5`, `qwen3.6:35b` id `a7eb95c53bcf`). No pull. Command, under the model lock:
 
 ```bash
 uv run --inexact python examples/poc_suite.py --live --model qwen2.5:14b --only --report tmp/jobs/live-qwen25-14b.json
 uv run --inexact python examples/poc_suite.py --live --model qwen3.6:35b --only --report tmp/jobs/live-qwen36-35b.json
 ```
 
-Both tags were already in `ollama list` (`qwen2.5:14b` id `7cdf5a0187d5`, `qwen3.6:35b` id `a7eb95c53bcf`). No pull. The bar is at least 8/12 success on one tag, and localized `llm_calls` below global replan with success no worse. Until those JSON files are copied here, the measured live result remains the 1/12 table above.
+`qwen2.5:14b` finished every arm at success 0/12, `plan_ok` false, `llm_calls` 12, `compile_retries` 0, `tool_calls` 0. All 36 rows are `LLMError: ollama request failed for qwen2.5:14b: HTTP Error 400: Bad Request`. The 35b arm was stopped after 4 tasks (`add_pair`, `mul_pair`, `scale_sum`, `parallel_sums` on the localized arm), each the same HTTP 400, so it is not a 12-task score. llama-server's body was `json_schema: type must be string, but is object`. The schema's `RefBinding` property is named `$ref`. That is Decision 0026. This pass did not measure plan quality. The last measured generation result remains the 1/12 table above.
+
+A corrected client sends `ollama_format_schema` and sets `think` false. That rerun is not in this file yet. The bar is still at least 8/12 success on one tag, and localized `llm_calls` below global replan with success no worse.
 
 GBNF (`decomposition_gbnf`, `--grammar` with `--client openai`) is implemented for llama-server and was not used for this Ollama rerun.
 

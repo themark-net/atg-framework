@@ -2,14 +2,16 @@
 
 Structured subgraphs are JSON that validates as ``Decomposition``
 (Decision 0012). The planner passes a schema built from the graph
-``$ref`` pattern (Decision 0025). ``OllamaClient`` sends that schema as
-Ollama ``format``. ``OpenAICompatClient`` sends it as ``response_format``
-and can send a GBNF ``grammar`` instead (Decision 0021, Decision 0025).
-``LiteLLMClient`` is the optional multi-provider adapter.
-Independent reimplementation of the ATG planner's model boundary;
-see docs/ATTRIBUTION.md (``zhang2026atg``).
+``$ref`` pattern (Decision 0025). ``OllamaClient`` sends a derived
+``format`` that inlines ``$defs`` and does not use a property named
+``$ref`` (Decision 0026). ``OpenAICompatClient`` sends the Pydantic
+schema as ``response_format`` and can send a GBNF ``grammar`` instead
+(Decision 0021, Decision 0025). ``LiteLLMClient`` is the optional
+multi-provider adapter. Independent reimplementation of the ATG
+planner's model boundary; see docs/ATTRIBUTION.md (``zhang2026atg``).
 """
 
+import copy
 import json
 import os
 from typing import Any
@@ -64,8 +66,55 @@ class MockLLM:
         return schema.model_validate(item)
 
 
+def ollama_format_schema(schema: dict) -> dict:
+    """Schema for Ollama ``format``. llama.cpp rejects a non-string ``$ref``.
+
+    ``RefBinding`` names a property ``$ref``. That key is removed and its
+    schema is applied as ``additionalProperties``, so an instance may still
+    carry ``{"$ref": "producer.outputs.field"}``. ``$defs`` are inlined.
+    The Pydantic model still checks the key (Decision 0026).
+    """
+
+    copied = copy.deepcopy(schema)
+    defs = copied.pop("$defs", {})
+    return _relax_dollar_ref(_inline_defs(copied, defs))
+
+
+def _inline_defs(node: Any, defs: dict) -> Any:
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref.startswith("#/$defs/"):
+            name = ref.rsplit("/", 1)[-1]
+            return _inline_defs(copy.deepcopy(defs[name]), defs)
+        return {key: _inline_defs(value, defs) for key, value in node.items()}
+    if isinstance(node, list):
+        return [_inline_defs(item, defs) for item in node]
+    return node
+
+
+def _relax_dollar_ref(node: Any) -> Any:
+    if isinstance(node, list):
+        return [_relax_dollar_ref(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+    props = node.get("properties")
+    if isinstance(props, dict) and "$ref" in props:
+        ref_schema = props.pop("$ref")
+        required = node.get("required")
+        if isinstance(required, list):
+            kept = [name for name in required if name != "$ref"]
+            if kept:
+                node["required"] = kept
+            else:
+                node.pop("required", None)
+        node["additionalProperties"] = ref_schema
+        if not props:
+            node.pop("properties", None)
+    return {key: _relax_dollar_ref(value) for key, value in node.items()}
+
+
 class OllamaClient:
-    """Local Ollama ``/api/chat``. ``format`` is the Pydantic JSON schema."""
+    """Local Ollama ``/api/chat``. Structured calls send ``think`` false."""
 
     def __init__(
         self,
@@ -98,7 +147,10 @@ class OllamaClient:
             "options": {"temperature": 0},
         }
         if schema is not None:
-            payload["format"] = schema
+            payload["format"] = ollama_format_schema(schema)
+            # Thinking models otherwise fill the decode budget before JSON,
+            # and Ollama then applies the schema to the wrong channel.
+            payload["think"] = False
         data = json.dumps(payload).encode()
         req = request.Request(
             f"{self.host}/api/chat",
@@ -109,6 +161,13 @@ class OllamaClient:
         try:
             with request.urlopen(req, timeout=self.timeout_s) as response:
                 return json.loads(response.read().decode())
+        except error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace").strip()
+            if len(detail) > 500:
+                detail = detail[:500]
+            raise LLMError(
+                f"ollama request failed for {self.model}: HTTP {exc.code}: {detail}"
+            ) from exc
         except error.URLError as exc:
             raise LLMError(f"ollama request failed for {self.model}: {exc}") from exc
 

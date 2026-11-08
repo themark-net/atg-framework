@@ -10,7 +10,7 @@ import pytest
 from pydantic import ValidationError
 
 from atg.executor import execute
-from atg.llm import LLMError, MockLLM, OllamaClient, OpenAICompatClient
+from atg.llm import LLMError, MockLLM, OllamaClient, OpenAICompatClient, ollama_format_schema
 from atg.metrics import Metrics
 from atg.planner import (
     ChildNode,
@@ -312,6 +312,42 @@ def _serve(good: str):
     return server, thread
 
 
+def _schema_keys(node: object, key: str) -> list[str]:
+    found: list[str] = []
+    if isinstance(node, dict):
+        if key in node:
+            found.append(key)
+        for value in node.values():
+            found.extend(_schema_keys(value, key))
+    elif isinstance(node, list):
+        for value in node:
+            found.extend(_schema_keys(value, key))
+    return found
+
+
+def _patterns(node: object) -> list[str]:
+    found: list[str] = []
+    if isinstance(node, dict):
+        pattern = node.get("pattern")
+        if isinstance(pattern, str):
+            found.append(pattern)
+        for value in node.values():
+            found.extend(_patterns(value))
+    elif isinstance(node, list):
+        for value in node:
+            found.extend(_patterns(value))
+    return found
+
+
+def test_ollama_format_drops_a_ref_property():
+    raw = planning_model(("add", "mul"), require_declared_output=True).model_json_schema()
+    assert "$defs" in raw
+    wire = ollama_format_schema(raw)
+    assert _schema_keys(wire, "$ref") == []
+    assert _schema_keys(wire, "$defs") == []
+    assert REF_PATTERN in _patterns(wire)
+
+
 def test_ollama_format_is_the_planning_schema():
     good = _good().model_dump_json()
     schema = planning_model(("add",), require_declared_output=True)
@@ -329,9 +365,44 @@ def test_ollama_format_is_the_planning_schema():
         server.server_close()
         thread.join(5)
     assert server.requests[0]["path"] == "/api/chat"
-    assert body["format"] == schema.model_json_schema()
+    assert body["format"] == ollama_format_schema(schema.model_json_schema())
+    assert _schema_keys(body["format"], "$ref") == []
+    assert body["think"] is False
     assert body["stream"] is False
     assert "grammar" not in body
+
+
+def test_ollama_http_error_includes_the_response_body():
+    class _Deny(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+            if length:
+                self.rfile.read(length)
+            msg = b'{"error":"type must be string, but is object"}'
+            self.send_response(400)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(msg)))
+            self.end_headers()
+            self.wfile.write(msg)
+
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _Deny)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        host, port = server.server_address
+        client = OllamaClient("qwen2.5:14b", host=f"http://{host}:{port}", timeout_s=5)
+        with pytest.raises(LLMError, match="type must be string, but is object"):
+            client.complete_structured(
+                [{"role": "user", "content": "compile"}],
+                planning_model(("add",), require_declared_output=True),
+            )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(5)
 
 
 def test_openai_grammar_replaces_response_format():

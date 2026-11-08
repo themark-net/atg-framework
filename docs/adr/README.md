@@ -31,5 +31,6 @@ Architecture: [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md)
 | 0023 | Default local model tag `qwen2.5:14b` | Accepted | 2026-10-06 |
 | 0024 | A malformed decomposition is a compile error | Accepted | 2026-10-06 |
 | 0025 | Planner schema from the graph model, bounded compile fix-up | Accepted | 2026-11-08 |
+| 0026 | Ollama format omits a `$ref` property; structured calls disable thinking | Accepted | 2026-11-08 |
 
 When decision count becomes unwieldy, migrate individual entries to `docs/adr/NNNN-slug.md` via a new Accepted decision—do not fork a second log silently.
