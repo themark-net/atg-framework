@@ -545,7 +545,7 @@ You can say “R1” and then override individual letters.
 - **Priority:** P2  
 - **Status:** open  
 - **Created:** 2026-09-20  
-- **Updated:** 2026-10-05  
+- **Updated:** 2026-11-08  
 - **Blocks:** —  
 - **Blocked-by:** —  
 - **Related-ADR:** Decision 0014  
@@ -569,6 +569,7 @@ You can say “R1” and then override individual letters.
 
 - **2026-10-05:** Recorded from `cursor/first-pass-atg-loop-b0e3` (`1982c58`). Not implemented. That branch’s `$parent` input convention was not copied. Decision 0012 already fixes literals and `$ref`.
 - **2026-10-07:** The branch was not merged. `main` keeps `run_task`. `escalate_after` stays out until a live double failure says otherwise.
+- **2026-11-08:** Session 5 live suite, git `b83acead7fb5e5399a79fba7e9a2bd660f46617a`, Ollama `qwen2.5:14b`. Localized `scale_sum` and `parallel_prod` each spent `repairs=2` (the Decision 0014 cap) and finished with no unique sink (`actual` null, `plan_ok` true). Full replan of those two tasks also finished with no unique sink (`repairs=1`). Sequential replay of the first plan did too. A wider parent is not shown to fix them on this run. `escalate_after` stays out. Status stays open. Recommendation stays (1).
 
 ---
 

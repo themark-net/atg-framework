@@ -6,13 +6,15 @@ The MVP in Decision 0004 is in tree: synthetic tools, a mock model, parallel exe
 
 The 2026-10-05 count was 35. The later tests cover the OpenAI-compatible client, the offline PoC, and a short `$ref` rejected before any tool runs (Decision 0024).
 
-## 0. Valid plans from local models (in progress, 2026-11-08)
+## 0. Valid plans from local models (parked, 2026-11-08)
 
 Decision 0025. The 2026-10-06 `qwen3.6:35b` suite was 1/12 valid plans, so repair never ran. The planner now sends a JSON schema built from the graph `$ref` pattern and, when validation fails, sends that error back for up to 3 plans. Extra calls are `metrics.compile_retries`, not `repairs`.
 
 Decision 0026. Ollama receives that schema with `$defs` inlined and with no property named `$ref`, and structured calls set `think` false. The corrected live sweep on `a80a4ba` is in `docs/poc/RESULTS.md`. Localized repair was 7/12 on both `qwen2.5:14b` (20 model calls) and `qwen3.6:35b` (22). Full replan was 10/12 (17 calls) and 9/12 (16 calls). The bar is not met.
 
-The prompt passes are scored in `docs/poc/RESULTS.md`. Session 4 (`55de9a6`) put the child `$ref` back on the root example. `qwen2.5:14b` full replan and sequential were 10/12. Localized repair was 5/12 (26 model calls) against 20 calls for full replan. `qwen3.6:35b` localized was 7/12 (20 calls) against 9/12 (16 calls). The bar is not met. The misses that never ran a tool were a self-edge, a `$ref` whose edge was omitted, or a repair that reused a parent producer id. Decision 0027 drops the self-edge, adds the edge an internal `$ref` already names, and puts the original task sentence on the repair note. `$ref` strings are not rewritten. Do not mark the bar met from a replan arm. `DEFAULT_MODEL` stays `qwen2.5:14b`. GBNF is still unused. Those session 4 misses were not invalid structured output.
+The prompt passes are scored in `docs/poc/RESULTS.md`. Session 4 (`55de9a6`) put the child `$ref` back on the root example. `qwen2.5:14b` full replan and sequential were 10/12. Localized repair was 5/12 (26 model calls) against 20 calls for full replan. `qwen3.6:35b` localized was 7/12 (20 calls) against 9/12 (16 calls). The bar is not met. The misses that never ran a tool were a self-edge, a `$ref` whose edge was omitted, or a repair that reused a parent producer id. Decision 0027 drops the self-edge, adds the edge an internal `$ref` already names, and puts the original task sentence on the repair note. `$ref` strings are not rewritten.
+
+Session 5 (`b83acea`) measured that compiler change. `qwen3.6:35b` localized repair was 9/12 (23 model calls) against full replan 10/12 (16 calls). Sequential was 10/12 (12 calls). `qwen2.5:14b` localized repair was 5/12 (23 calls) against full replan 8/12 (18 calls). The best arm across the five live passes is 10/12. Localized repair has not beaten full replan on model calls with success no worse. The closest pass is session 3 on `qwen3.6:35b`, a tie at 2/12 and 32 calls. Every other scored pass has fewer localized successes and more localized model calls. The bar is unmet, and the item is parked. A replan arm of 10/12 does not close it. `DEFAULT_MODEL` stays `qwen2.5:14b`. OQ-0016 and OQ-0017 stay open. GBNF stayed unused. The session 5 misses are wrong sinks, missing sinks, an example id, and repairs that leave a parent output unconsumed. Details are in `docs/poc/RESULTS.md`.
 
 ## 1. Live toy remeasure — done 2026-10-06
 
