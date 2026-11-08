@@ -40,6 +40,8 @@ _SYSTEM = (
     "producer.field is invalid.\n"
     "- A $ref may name a child that is an ancestor through edges, or an id already present "
     "on the parent inputs. Do not name the parent id.\n"
+    "- A $ref to another child is valid only when edges includes that child as src "
+    "and the reader as dst.\n"
     "- Copy every parent $ref onto some child. Do not invent an external $ref the parent does not have. "
     "Never emit an id that starts with example_. Those ids exist only in the example.\n"
     "- Every sink (a node with no outgoing edge) must list the parent declared_outputs "
@@ -251,6 +253,7 @@ def propose_subgraph(
     llm: Any,
     *,
     note: str | None = None,
+    repair: bool = False,
     metrics: Metrics | None = None,
     max_attempts: int = DEFAULT_COMPILE_ATTEMPTS,
 ) -> TaskGraph:
@@ -275,7 +278,13 @@ def propose_subgraph(
         validator_error = None if last is None else str(last)
         try:
             raw = llm.complete_structured(
-                _messages(parent, registry, note=note, validator_error=validator_error),
+                _messages(
+                    parent,
+                    registry,
+                    note=note,
+                    repair=repair,
+                    validator_error=validator_error,
+                ),
                 schema,
             )
         except Exception as exc:
@@ -298,6 +307,14 @@ def propose_subgraph(
         try:
             spec = _as_decomposition(raw)
             last_spec = spec
+            copied = _copied_example_ids(spec)
+            if copied:
+                raise CompileError(
+                    "ids copied from the example ("
+                    + ", ".join(copied)
+                    + "). Invent new ids. Do not emit example_. "
+                    "A $ref to another child needs an edge from that child to the reader."
+                )
             subgraph = _decomposition_graph(spec, parent)
             assert_interface_preserved(parent, subgraph)
         except (ValidationError, InterfaceError, GraphError, CompileError) as exc:
@@ -320,6 +337,7 @@ def _messages(
     registry: ToolRegistry,
     *,
     note: str | None = None,
+    repair: bool = False,
     validator_error: str | None = None,
 ) -> list[dict]:
     payload: dict[str, Any] = {
@@ -332,7 +350,7 @@ def _messages(
         "tools": registry.as_openai_tools(),
         "sink_outputs": list(node.declared_outputs),
     }
-    example = _catalog_example(node, registry)
+    example = _catalog_example(node, registry, repair=repair)
     if example is not None:
         payload["example"] = example
     if note:
@@ -345,14 +363,18 @@ def _messages(
     ]
 
 
-def _catalog_example(node: TaskNode, registry: ToolRegistry) -> dict[str, Any] | None:
-    """One example whose tool name and parameter names come from the registry.
+def _catalog_example(
+    node: TaskNode,
+    registry: ToolRegistry,
+    *,
+    repair: bool,
+) -> dict[str, Any] | None:
+    """One example whose tool and parameter names come from the registry.
 
-    The node id starts with ``example_`` and the prompt forbids emitting it.
-    A ``$ref`` appears only when that producer is already on the parent, and
-    then the example copies the parent's ref. A root example is literals
-    only, so it has no producer id to copy. Repairs were copying ``step``
-    (2026-11-08 ``fail_parallel``) and ``example_src`` (``fail_diamond``).
+    A root compile shows a child ``$ref`` and the edge that makes that child
+    an ancestor. Repair prompts do not. A parent that already has a ``$ref``
+    is copied, and ``example_src`` is not added. Copied ``example_`` ids are
+    a compile error, not a rewrite of the ``$ref``.
     """
 
     tools = registry.as_openai_tools()
@@ -366,14 +388,44 @@ def _catalog_example(node: TaskNode, registry: ToolRegistry) -> dict[str, Any] |
         inputs: dict[str, Any] = {params[0]: {"$ref": parent_refs[0]}}
         for name in params[1:]:
             inputs[name] = 1
-    else:
+        return _one_node_example(function["name"], inputs, outputs)
+    if repair:
         inputs = {name: index + 1 for index, name in enumerate(params)}
+        return _one_node_example(function["name"], inputs, outputs)
+    literals = {name: index + 1 for index, name in enumerate(params)}
+    consumer: dict[str, Any] = {params[0]: {"$ref": f"example_src.outputs.{outputs[0]}"}}
+    for name in params[1:]:
+        consumer[name] = 1
+    return {
+        "nodes": [
+            {
+                "id": "example_src",
+                "name": "example_src",
+                "tool_name": function["name"],
+                "inputs": literals,
+                "declared_outputs": outputs,
+                "refine": False,
+            },
+            {
+                "id": "example_dst",
+                "name": "example_dst",
+                "tool_name": function["name"],
+                "inputs": consumer,
+                "declared_outputs": outputs,
+                "refine": False,
+            },
+        ],
+        "edges": [{"src": "example_src", "dst": "example_dst"}],
+    }
+
+
+def _one_node_example(tool_name: str, inputs: dict[str, Any], outputs: list[str]) -> dict[str, Any]:
     return {
         "nodes": [
             {
                 "id": "example_dst",
                 "name": "example_dst",
-                "tool_name": function["name"],
+                "tool_name": tool_name,
                 "inputs": inputs,
                 "declared_outputs": outputs,
                 "refine": False,
@@ -381,6 +433,38 @@ def _catalog_example(node: TaskNode, registry: ToolRegistry) -> dict[str, Any] |
         ],
         "edges": [],
     }
+
+
+def _ref_producer_id(value: Any) -> str | None:
+    """Producer id from a ``$ref`` object. Malformed refs are left to the compiler."""
+
+    if not isinstance(value, dict) or set(value) != {"$ref"}:
+        return None
+    raw = value.get("$ref")
+    if not isinstance(raw, str) or ".outputs." not in raw:
+        return None
+    return raw.split(".outputs.", 1)[0]
+
+
+def _copied_example_ids(spec: Decomposition) -> list[str]:
+    found: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: str) -> None:
+        if value.startswith("example_") and value not in seen:
+            seen.add(value)
+            found.append(value)
+
+    for child in spec.nodes:
+        add(child.id)
+        for item in child.inputs.values():
+            producer = _ref_producer_id(item)
+            if producer is not None:
+                add(producer)
+    for edge in spec.edges:
+        add(edge.src)
+        add(edge.dst)
+    return found
 
 
 def _parent_ref_strings(node: TaskNode) -> list[str]:

@@ -18,7 +18,7 @@ assert _SPEC is not None and _SPEC.loader is not None
 toy_parallel = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(toy_parallel)
 
-_RETRY_TEXT = "The previous content was not valid JSON for the schema. Return only JSON."
+_RETRY_PREFIX = "The previous content was not valid JSON for the schema. Validator: "
 
 
 class _Server(ThreadingHTTPServer):
@@ -130,7 +130,10 @@ def test_malformed_reply_is_retried_once_and_is_not_the_graph():
     }
     assert "response_format" not in second
     assert second["messages"][:-1] == first["messages"]
-    assert second["messages"][-1] == {"role": "user", "content": _RETRY_TEXT}
+    retry = second["messages"][-1]
+    assert retry["role"] == "user"
+    assert retry["content"].startswith(_RETRY_PREFIX)
+    assert retry["content"].endswith(" Return only JSON.")
     assert set(result.graph.node_ids()) == {"s", "p", "t"}
     assert set(result.graph.edges()) == {("s", "t"), ("p", "t")}
     assert "not-json" not in result.graph.node_ids()

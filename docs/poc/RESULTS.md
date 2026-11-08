@@ -142,6 +142,50 @@ Per task, actual sink (`Y` expected value, `n` miss, `n null` when the sink was 
 
 Localized repair still does not beat full replan. On both tags it solved fewer tasks and used more model calls (14b 25 vs 21, 35b 20 vs 16). The best arm on this run is 9/12. The bar is not met. `qwen2.5:14b` `diamond` is 18 on every arm, so the sibling rule landed for that tag. `qwen3.6:35b` `diamond` is 10 on every arm, three tool calls, no repair: a valid plan with the wrong sink. The 14b localized repair of `fail_parallel` no longer cites `step`. It stops on a self-edge (`product_4_and_5` to itself). The 14b localized repair of `fail_diamond` still emits `example_src.outputs.a`, which the prompt forbids. That id is still in the example when the parent has no `$ref` to copy. GBNF was not used. `DEFAULT_MODEL` stays `qwen2.5:14b`.
 
+## Literals-only root example (2026-11-08, session 3)
+
+Git `3bf47f94dbd9efba8a86c04121927cecd0137eb8`. The root few-shot is one `example_dst` node with literal inputs and no edges. A `$ref` is copied only when that producer is already on the parent. `example_src` is not in the example. The sibling rule is unchanged. Ollama 0.30.8. Same tags, no pull: `qwen2.5:14b` `7cdf5a0187d5`, `qwen3.6:35b` `a7eb95c53bcf`. The run waited on the model lock, then started `2026-11-08T13:50:23-08:00` and finished `2026-11-08T14:19:45-08:00`. Fresh journals (session 2 and the Decision 0026 JSONL were not resumed). Both process exits were 1. Reports: `docs/poc/live-qwen25-14b-2026-11-08-s3.json` and `docs/poc/live-qwen36-35b-2026-11-08-s3.json`.
+
+```bash
+uv run --inexact python examples/poc_suite.py --live --model qwen2.5:14b --only --report tmp/jobs/s3-qwen25-14b.json
+uv run --inexact python examples/poc_suite.py --live --model qwen3.6:35b --only --report tmp/jobs/s3-qwen36-35b.json
+```
+
+`qwen2.5:14b`:
+
+| Arm | Success | Valid plans | LLM calls | Tool calls | Frozen reuse | Repairs | Compile retries | Wall | Widest wave |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Localized repair | 5/12 | 9/12 | 30 | 19 | 10 | 7 | 9 | 389 s | 2 |
+| Global replan | 6/12 | 10/12 | 23 | 40 | 0 | 5 | 6 | 373 s | 3 |
+| Sequential | 6/12 | 10/12 | 17 | 34 | 0 | 0 | 5 | 267 s | 1 |
+
+`qwen3.6:35b`:
+
+| Arm | Success | Valid plans | LLM calls | Tool calls | Frozen reuse | Repairs | Compile retries | Wall | Widest wave |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Localized repair | 2/12 | 2/12 | 32 | 2 | 0 | 0 | 20 | 254 s | 1 |
+| Global replan | 2/12 | 2/12 | 32 | 2 | 0 | 0 | 20 | 237 s | 1 |
+| Sequential | 2/12 | 2/12 | 32 | 2 | 0 | 0 | 20 | 242 s | 1 |
+
+Per task, actual sink (`Y` expected value, `n` miss, `n null` when the sink was missing or not unique). `L` localized, `G` global replan, `S` sequential. A bare `n` on `qwen3.6:35b` is `CompileError: returned invalid structured output` after two compile retries.
+
+| Task | Expected | 14b L | 14b G | 14b S | 35b L | 35b G | 35b S |
+| --- | ---: | --- | --- | --- | --- | --- | --- |
+| add_pair | 5 | Y 5 | Y 5 | Y 5 | Y 5 | Y 5 | Y 5 |
+| mul_pair | 42 | Y 42 | Y 42 | Y 42 | Y 42 | Y 42 | Y 42 |
+| scale_sum | 20 | n null | n | n | n | n | n |
+| parallel_sums | 10 | Y 10 | Y 10 | Y 10 | n | n | n |
+| parallel_prod | 29 | n null | n null | n null | n | n | n |
+| diamond | 18 | Y 18 | Y 18 | Y 18 | n | n | n |
+| three_wide | 12 | n | n | n | n | n | n |
+| nested_chain | 36 | Y 36 | Y 36 | Y 36 | n | n | n |
+| fail_parallel | 25 | n | Y 25 | Y 25 | n | n | n |
+| fail_chain | 21 | n 20 | n null | n null | n | n | n |
+| fail_diamond | 14 | n null | n 20 | n 20 | n | n | n |
+| fail_wide | 12 | n | n null | n null | n | n | n |
+
+This pass is worse than session 2 on both tags. Localized repair still does not beat full replan. The best arm is 6/12. The bar is not met. `qwen2.5:14b` `diamond` stays 18. `three_wide` and `scale_sum` compiled a `$ref` whose producer is not an ancestor (the edge is missing). `qwen3.6:35b` solved only `add_pair` and `mul_pair`. The other ten tasks on every arm are `invalid structured output`, with no tool call. Removing the `$ref` object from the root example matches that collapse. `example_src` does not appear in the 14b errors. GBNF was not used. `DEFAULT_MODEL` stays `qwen2.5:14b`.
+
 ## What this repository does not claim
 
 The paper's environment scores are Zhang et al.'s. This run did not execute those environments (Decision 0018). A valid-plan rate of 1/12 on `qwen3.6:35b` is a property of this prompt and this tag on this day. It is not a ranking against GPT-4 or against the paper's 7B–8B agents.

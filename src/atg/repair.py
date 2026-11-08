@@ -122,6 +122,7 @@ def repair_graph(
             registry,
             llm,
             note=note,
+            repair=True,
             metrics=metrics,
             max_attempts=max_compile_attempts,
         )

@@ -180,13 +180,12 @@ def test_prompt_uses_a_catalog_few_shot_and_credits_the_paper():
     assert ".outputs." in system
     assert "Never emit an id that starts with example_" in system
     assert "two operations to the same value in parallel" in system
+    assert "edges includes that child as src" in system
     assert example["nodes"][0]["tool_name"] == "add"
     assert example["nodes"][0]["inputs"] == {"a": 1, "b": 2}
-    assert example["edges"] == []
-    assert _ref_producers(example) == []
-    assert "$ref" not in mock.seen[0][1]["content"]
-    assert node_ids == {"example_dst"}
-    assert "example_src" not in mock.seen[0][1]["content"]
+    assert example["edges"] == [{"src": "example_src", "dst": "example_dst"}]
+    assert _ref_producers(example) == ["example_src"]
+    assert node_ids == {"example_src", "example_dst"}
     assert "step" not in mock.seen[0][1]["content"]
     assert user["sink_outputs"] == ["value"]
     assert "validator_error" not in user
@@ -224,6 +223,108 @@ def test_example_copies_a_parent_ref_instead_of_an_example_id():
     assert all(not producer.startswith("example_") for producer in _ref_producers(example))
     assert "step" not in mock.seen[0][1]["content"]
     assert "example_src" not in mock.seen[0][1]["content"]
+
+
+def _copied_src() -> Decomposition:
+    return Decomposition(
+        nodes=[
+            ChildNode(
+                id="example_src",
+                name="example_src",
+                tool_name="add",
+                inputs={"a": 2, "b": 3},
+                declared_outputs=["value"],
+                refine=False,
+            )
+        ]
+    )
+
+
+def test_copied_example_id_is_sent_back_and_then_runs():
+    registry = _registry()
+    root = TaskNode(id="job", name="Add 2 and 3.", declared_outputs=["value"])
+    copied_ref = Decomposition(
+        nodes=[
+            ChildNode(
+                id="total",
+                name="total",
+                tool_name="add",
+                inputs={"a": {"$ref": "example_src.outputs.value"}, "b": 3},
+                declared_outputs=["value"],
+                refine=False,
+            )
+        ]
+    )
+    mock = _Recording([copied_ref, _good()])
+    metrics = Metrics()
+    graph, _history = compile_task(root, registry, mock, metrics=metrics)
+    execute(graph, registry, metrics=metrics)
+    assert graph.get("total").outputs == {"value": 5}
+    assert metrics.compile_retries == 1
+    assert metrics.repairs == 0
+    second = json.loads(mock.seen[1][1]["content"])
+    assert "example_src" in second["validator_error"]
+    assert "Invent new ids" in second["validator_error"]
+
+
+def test_copied_example_id_stops_at_the_budget_and_does_not_run_tools():
+    registry = _registry()
+    called: list[tuple[int, int]] = []
+
+    def add(a: int, b: int) -> dict:
+        called.append((a, b))
+        return {"value": a + b}
+
+    registry.get("add").fn = add
+    root = TaskNode(id="job", name="Add 2 and 3.", declared_outputs=["value"])
+    mock = MockLLM([_copied_src(), _copied_src()])
+    metrics = Metrics()
+    with pytest.raises(CompileError, match="example_src"):
+        compile_task(root, registry, mock, metrics=metrics, max_compile_attempts=2)
+    assert mock.calls == 2
+    assert metrics.compile_retries == 1
+    assert metrics.repairs == 0
+    assert called == []
+
+
+def test_repair_example_does_not_repeat_the_root_producer():
+    """A failed literal tool must not be shown example_src. Root compile still is."""
+
+    calls = {"n": 0}
+    registry = _registry()
+
+    def add(a: int, b: int) -> dict:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("boom")
+        return {"value": a + b}
+
+    registry.get("add").fn = add
+    root = TaskNode(id="job", name="Add 2 and 3.", declared_outputs=["value"])
+    repair = Decomposition(
+        nodes=[
+            ChildNode(
+                id="total",
+                name="total",
+                tool_name="add",
+                inputs={"a": 2, "b": 3},
+                declared_outputs=["value"],
+                refine=False,
+            )
+        ]
+    )
+    mock = _Recording([_good(), repair])
+    result = run_task(root, registry, mock)
+    assert result.metrics.repairs == 1
+    assert result.graph.get("total").outputs == {"value": 5}
+    root_example = json.loads(mock.seen[0][1]["content"])["example"]
+    assert _ref_producers(root_example) == ["example_src"]
+    repair_user = mock.seen[1][1]["content"]
+    assert "example_src" not in repair_user
+    repair_example = json.loads(repair_user)["example"]
+    assert repair_example["edges"] == []
+    assert _ref_producers(repair_example) == []
+    assert repair_example["nodes"][0]["inputs"] == {"a": 1, "b": 2}
 
 
 def test_compile_fixup_sends_the_validator_error_and_then_runs():
@@ -335,10 +436,12 @@ class _Capture(BaseHTTPRequestHandler):
         raw = self.rfile.read(length) if length else b""
         body = json.loads(raw.decode())
         self.server.requests.append({"path": self.path, "body": body})
+        queue = getattr(self.server, "queue", None)
+        content = queue.pop(0) if queue else self.server.good
         if self.path.startswith("/v1/"):
-            payload = {"choices": [{"message": {"role": "assistant", "content": self.server.good}}]}
+            payload = {"choices": [{"message": {"role": "assistant", "content": content}}]}
         else:
-            payload = {"message": {"role": "assistant", "content": self.server.good}}
+            payload = {"message": {"role": "assistant", "content": content}}
         encoded = json.dumps(payload).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -428,6 +531,30 @@ def test_ollama_format_is_the_planning_schema():
     assert body["think"] is False
     assert body["stream"] is False
     assert "grammar" not in body
+
+
+def test_schema_rejection_names_the_field_and_is_sent_back():
+    registry = _registry()
+    root = TaskNode(id="job", name="Add 2 and 3.", declared_outputs=["value"])
+    bad = '{"nodes":[{"id":"total"}],"edges":[]}'
+    server, thread = _serve(_good().model_dump_json())
+    server.queue = [bad, _good().model_dump_json()]
+    try:
+        host, port = server.server_address
+        client = OllamaClient("qwen2.5:14b", host=f"http://{host}:{port}", timeout_s=5)
+        metrics = Metrics()
+        graph, _history = compile_task(root, registry, client, metrics=metrics)
+        execute(graph, registry, metrics=metrics)
+        second = json.loads(server.requests[1]["body"]["messages"][1]["content"])
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(5)
+    assert graph.get("total").outputs == {"value": 5}
+    assert metrics.compile_retries == 1
+    assert metrics.repairs == 0
+    assert "nodes.0.name" in second["validator_error"]
+    assert "invalid structured output" in second["validator_error"]
 
 
 def test_ollama_http_error_includes_the_response_body():

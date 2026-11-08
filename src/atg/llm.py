@@ -137,7 +137,9 @@ class OllamaClient:
         try:
             return _parse_model(content, schema)
         except ValidationError as exc:
-            raise LLMError(f"{self.model} returned invalid structured output") from exc
+            raise LLMError(
+                f"{self.model} returned invalid structured output: {_validation_summary(exc)}"
+            ) from exc
 
     def _post(self, messages: list[dict], schema: dict | None) -> dict:
         payload: dict[str, Any] = {
@@ -212,22 +214,25 @@ class OpenAICompatClient:
         content = self._content(messages, response_format=response_format)
         try:
             return _parse_model(content, schema)
-        except (ValidationError, json.JSONDecodeError):
+        except (ValidationError, json.JSONDecodeError) as exc:
+            summary = _validation_summary(exc)
             follow_up = list(messages)
             follow_up.append(
                 {
                     "role": "user",
                     "content": (
                         "The previous content was not valid JSON for the schema. "
-                        "Return only JSON."
+                        f"Validator: {summary}. Return only JSON."
                     ),
                 }
             )
             retry = self._content(follow_up, response_format=None)
             try:
                 return _parse_model(retry, schema)
-            except (ValidationError, json.JSONDecodeError) as exc:
-                raise LLMError(f"{self.model} returned invalid structured output") from exc
+            except (ValidationError, json.JSONDecodeError) as retry_exc:
+                raise LLMError(
+                    f"{self.model} returned invalid structured output: {_validation_summary(retry_exc)}"
+                ) from retry_exc
 
     def _content(self, messages: list[dict], *, response_format: dict | None) -> str:
         body = self._post(messages, response_format=response_format)
@@ -309,6 +314,24 @@ def _litellm():
     except ImportError as exc:
         raise LLMError("LiteLLM is not installed. Use OllamaClient or pip install 'atg-framework[llm]'.") from exc
     return litellm
+
+
+def _validation_summary(exc: BaseException) -> str:
+    """Short field list for a schema rejection. Sent back on the next plan."""
+
+    errors = getattr(exc, "errors", None)
+    parts: list[str] = []
+    if callable(errors):
+        for err in errors()[:3]:
+            loc = ".".join(str(piece) for piece in err.get("loc", ()))
+            msg = str(err.get("msg", "")).replace("\n", " ")
+            parts.append(f"{loc}: {msg}" if loc else msg)
+    if not parts:
+        parts.append(str(exc).replace("\n", " "))
+    text = "; ".join(parts)
+    if len(text) > 400:
+        text = text[:400]
+    return text
 
 
 def _parse_model(content: str, schema: type[BaseModel]) -> BaseModel:

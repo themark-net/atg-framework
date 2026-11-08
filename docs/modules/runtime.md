@@ -32,7 +32,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 |---------|--------------|----------|
 | `CompileError` depth cap | The model kept emitting non-atomic nodes | Lower the task or raise `max_depth` for one run. The default cap is 6 (Decision 0007). |
 | `CompileError` / `RepairError` interface | The decomposition dropped a parent `$ref` or a sink output, and the compile fix-up budget is spent | The planner already sent the validator text back, up to `max_compile_attempts` (default 3). `metrics.compile_retries` counts those extra calls. `metrics.repairs` does not. The graph from before the failed replacement is unchanged. |
-| `LLMError` | Ollama is down, the tag returned non-JSON, or either client saw an HTTP error, URL error, or socket timeout | The Ollama message includes a truncated response body (Decision 0026). Check `ollama list` for the default client. For `--client openai`, check `ATG_BASE_URL`. The live script tries `qwen2.5:14b`, then `gemma4:latest`. |
+| `LLMError` | Ollama is down, the tag returned non-JSON, or either client saw an HTTP error, URL error, or socket timeout | The message names up to three schema fields when the JSON does not match. The Ollama HTTP message includes a truncated response body (Decision 0026). Check `ollama list` for the default client. For `--client openai`, check `ATG_BASE_URL`. The live script tries `qwen2.5:14b`, then `gemma4:latest`. |
 | Tool node `failed` after two repairs | The callable raised twice, or a pre-execution repair used the same budget | `RunResult.metrics.repairs` counts both. The cap is `max_repairs` (default 2). |
 | Thought check fails and nothing runs | The error names no live node, often an unscoped judge reason | That is Decision 0020. A named node is repaired before `execute`. |
 | `frozen nodes cannot be reset` | `reset_for_repair` on a frozen node | That refusal is Decision 0014. Repair must replace a different region. |
@@ -80,7 +80,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 
 - `run_task` calls compile, thought, repair, and execute. Thought repairs that name a node run before execute (Decision 0020).
 - `compile_task` and `repair_graph` call `propose_subgraph`, which calls `complete_structured` with `planning_model` and then `assert_interface_preserved`. A validator failure is sent back until `max_compile_attempts`.
-- The few-shot example takes its tool name from the registry. Its node id starts with `example_`, and the prompt forbids emitting that prefix. When the parent already has a `$ref`, the example copies that ref. When the parent has none, every example input is a literal.
+- The few-shot example takes its tool name from the registry. A root compile shows two `example_` nodes, one child `$ref`, and the edge that makes that child an ancestor. A repair does not. When the parent already has a `$ref`, the example copies that ref and does not add `example_src`. The prompt forbids emitting the `example_` prefix. A plan that copies it is a compile error and is sent back. That is not a rewrite of the `$ref` (Decision 0024).
 - `OllamaClient` turns that schema into `ollama_format_schema` (no `$defs`, no property named `$ref`) and sets `think` false (Decision 0026). `OpenAICompatClient` sends the Pydantic schema unchanged.
 - `execute` calls `mark_ready`, `transition`, and the runner. It does not call the LLM.
 - Adapters call `run_task` only. They do not import LangGraph or DSPy.
@@ -95,7 +95,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 - Core modules do not import LiteLLM, LangGraph, or DSPy.
 - A node that is still `running` at the start of `execute` becomes `failed` and its callable is not invoked (Decision 0020).
 - `save_history` replaces the checkpoint. A failed write leaves the previous file.
-- A `$ref` in the few-shot example is a `$ref` already on the parent. The example does not introduce a producer id.
+- A repair example does not introduce a producer id. A root example may, and only with the `example_` prefix. A copied `example_` id fails compilation and is retried. Short `$ref` strings are still not rewritten (Decision 0024).
 
 ### Extension points
 
