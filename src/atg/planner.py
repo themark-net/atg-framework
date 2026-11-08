@@ -20,7 +20,7 @@ from atg.history import GraphHistory
 from atg.llm import LLMError
 from atg.metrics import Metrics
 from atg.tools import ToolRegistry, is_atomic
-from atg.types import ID_HEAD, ID_TAIL, ID_PATTERN, REF_PATTERN, TaskNode
+from atg.types import ID_HEAD, ID_TAIL, ID_PATTERN, REF_PATTERN, TaskNode, parse_ref
 from atg.validation import InterfaceError, assert_interface_preserved
 
 # First plan plus two corrections. Counted on Metrics.compile_retries, not repairs.
@@ -40,11 +40,15 @@ _SYSTEM = (
     "producer.field is invalid.\n"
     "- A $ref may name a child that is an ancestor through edges, or an id already present "
     "on the parent inputs. Do not name the parent id.\n"
-    "- Copy every parent $ref onto some child. Do not invent an external $ref the parent does not have.\n"
+    "- Copy every parent $ref onto some child. Do not invent an external $ref the parent does not have. "
+    "Never emit an id that starts with example_. Those ids exist only in the example.\n"
     "- Every sink (a node with no outgoing edge) must list the parent declared_outputs "
     "by those exact names. Do not leave declared_outputs empty.\n"
     "- Edges connect child ids only. Do not use the parent id as a node or an edge endpoint.\n"
-    "- Steps that do not depend on each other are siblings with no edge between them.\n"
+    "- Steps that do not depend on each other are siblings with no edge between them. "
+    "When the task applies two operations to the same value in parallel, both operations are siblings, "
+    "each takes a $ref to that value, and a later node combines their outputs. "
+    "Do not chain one of those operations into the other, and do not replace one of them with a bare literal.\n"
     "The example in the user message shows the shape. Use the task's own numbers and tools. "
     "Do not copy the example numbers when the task states different ones."
 )
@@ -342,7 +346,13 @@ def _messages(
 
 
 def _catalog_example(node: TaskNode, registry: ToolRegistry) -> dict[str, Any] | None:
-    """One two-node example whose tool name and parameter names come from the registry."""
+    """One example whose tool name and parameter names come from the registry.
+
+    Ids start with ``example_`` and the prompt forbids emitting them. When the
+    parent already has a ``$ref``, the example copies that ref and does not
+    invent a producer. A repair was copying the old id ``step`` as an external
+    ref (2026-11-08 ``fail_parallel``).
+    """
 
     tools = registry.as_openai_tools()
     if not tools:
@@ -350,31 +360,58 @@ def _catalog_example(node: TaskNode, registry: ToolRegistry) -> dict[str, Any] |
     function = tools[0]["function"]
     params = list(function.get("parameters", {}).get("properties", {})) or ["value"]
     outputs = list(node.declared_outputs) or ["value"]
+    parent_refs = _parent_ref_strings(node)
+    if parent_refs:
+        consumer: dict[str, Any] = {params[0]: {"$ref": parent_refs[0]}}
+        for name in params[1:]:
+            consumer[name] = 1
+        return {
+            "nodes": [
+                {
+                    "id": "example_dst",
+                    "name": "example_dst",
+                    "tool_name": function["name"],
+                    "inputs": consumer,
+                    "declared_outputs": outputs,
+                    "refine": False,
+                }
+            ],
+            "edges": [],
+        }
     literals = {name: index + 1 for index, name in enumerate(params)}
-    consumer: dict[str, Any] = {params[0]: {"$ref": f"step.outputs.{outputs[0]}"}}
+    consumer = {params[0]: {"$ref": f"example_src.outputs.{outputs[0]}"}}
     for name in params[1:]:
         consumer[name] = 1
     return {
         "nodes": [
             {
-                "id": "step",
-                "name": "step",
+                "id": "example_src",
+                "name": "example_src",
                 "tool_name": function["name"],
                 "inputs": literals,
                 "declared_outputs": outputs,
                 "refine": False,
             },
             {
-                "id": "total",
-                "name": "total",
+                "id": "example_dst",
+                "name": "example_dst",
                 "tool_name": function["name"],
                 "inputs": consumer,
                 "declared_outputs": outputs,
                 "refine": False,
             },
         ],
-        "edges": [{"src": "step", "dst": "total"}],
+        "edges": [{"src": "example_src", "dst": "example_dst"}],
     }
+
+
+def _parent_ref_strings(node: TaskNode) -> list[str]:
+    found: list[str] = []
+    for value in node.inputs.values():
+        parsed = parse_ref(value)
+        if parsed is not None:
+            found.append(f"{parsed.node_id}.outputs.{parsed.field}")
+    return found
 
 
 def _as_decomposition(raw: Any) -> Decomposition:

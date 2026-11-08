@@ -151,6 +151,21 @@ def test_planning_schema_rejects_a_tool_that_is_not_in_the_registry():
         )
 
 
+def _ref_producers(value: object) -> list[str]:
+    found: list[str] = []
+    if isinstance(value, dict):
+        raw = value.get("$ref")
+        if isinstance(raw, str) and set(value) == {"$ref"}:
+            found.append(raw.split(".outputs.", 1)[0])
+        else:
+            for item in value.values():
+                found.extend(_ref_producers(item))
+    elif isinstance(value, list):
+        for item in value:
+            found.extend(_ref_producers(item))
+    return found
+
+
 def test_prompt_uses_a_catalog_few_shot_and_credits_the_paper():
     registry = _registry()
     root = TaskNode(id="job", name="Add 2 and 3.", declared_outputs=["value"])
@@ -158,14 +173,55 @@ def test_prompt_uses_a_catalog_few_shot_and_credits_the_paper():
     compile_task(root, registry, mock, metrics=Metrics())
     system = mock.seen[0][0]["content"]
     user = json.loads(mock.seen[0][1]["content"])
+    example = user["example"]
+    node_ids = {node["id"] for node in example["nodes"]}
     assert "Zhang et al." in system
     assert "2607.01942" in system
     assert ".outputs." in system
-    assert user["example"]["nodes"][0]["tool_name"] == "add"
-    assert user["example"]["nodes"][0]["inputs"] == {"a": 1, "b": 2}
-    assert user["example"]["nodes"][1]["inputs"]["a"] == {"$ref": "step.outputs.value"}
+    assert "Never emit an id that starts with example_" in system
+    assert "two operations to the same value in parallel" in system
+    assert example["nodes"][0]["tool_name"] == "add"
+    assert example["nodes"][0]["inputs"] == {"a": 1, "b": 2}
+    assert example["nodes"][1]["inputs"]["a"] == {"$ref": "example_src.outputs.value"}
+    assert set(_ref_producers(example)) <= node_ids
+    assert node_ids == {"example_src", "example_dst"}
+    assert "step" not in mock.seen[0][1]["content"]
     assert user["sink_outputs"] == ["value"]
     assert "validator_error" not in user
+
+
+def test_example_copies_a_parent_ref_instead_of_an_example_id():
+    """A repair parent already names the external producer. The example must too."""
+
+    registry = _registry()
+    root = TaskNode(
+        id="region",
+        name="Replace the failed product.",
+        inputs={"left": {"$ref": "a_left.outputs.value"}},
+        declared_outputs=["value"],
+    )
+    repaired = Decomposition(
+        nodes=[
+            ChildNode(
+                id="total",
+                name="total",
+                tool_name="add",
+                inputs={"a": {"$ref": "a_left.outputs.value"}, "b": 1},
+                declared_outputs=["value"],
+                refine=False,
+            )
+        ]
+    )
+    mock = _Recording([repaired])
+    graph, _history = compile_task(root, registry, mock, metrics=Metrics())
+    assert graph.get("total").inputs["a"] == {"$ref": "a_left.outputs.value"}
+    example = json.loads(mock.seen[0][1]["content"])["example"]
+    node_ids = {node["id"] for node in example["nodes"]}
+    assert _ref_producers(example) == ["a_left"]
+    assert "a_left" not in node_ids
+    assert all(not producer.startswith("example_") for producer in _ref_producers(example))
+    assert "step" not in mock.seen[0][1]["content"]
+    assert "example_src" not in mock.seen[0][1]["content"]
 
 
 def test_compile_fixup_sends_the_validator_error_and_then_runs():

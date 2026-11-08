@@ -10,7 +10,9 @@ The 2026-10-05 count was 35. The later tests cover the OpenAI-compatible client,
 
 Decision 0025. The 2026-10-06 `qwen3.6:35b` suite was 1/12 valid plans, so repair never ran. The planner now sends a JSON schema built from the graph `$ref` pattern and, when validation fails, sends that error back for up to 3 plans. Extra calls are `metrics.compile_retries`, not `repairs`.
 
-Decision 0026. Ollama receives that schema with `$defs` inlined and with no property named `$ref`, and structured calls set `think` false. The corrected live sweep on `a80a4ba` is in `docs/poc/RESULTS.md`. Localized repair was 7/12 on both `qwen2.5:14b` (20 model calls) and `qwen3.6:35b` (22). Full replan was 10/12 (17 calls) and 9/12 (16 calls). The bar is not met. The next pass is the planner prompt: `diamond` compiles and returns the wrong sink, and the 14b localized repair of `fail_parallel` copied the few-shot id `step`. Do not mark the bar met from the 10/12 replan arm. `DEFAULT_MODEL` stays `qwen2.5:14b`.
+Decision 0026. Ollama receives that schema with `$defs` inlined and with no property named `$ref`, and structured calls set `think` false. The corrected live sweep on `a80a4ba` is in `docs/poc/RESULTS.md`. Localized repair was 7/12 on both `qwen2.5:14b` (20 model calls) and `qwen3.6:35b` (22). Full replan was 10/12 (17 calls) and 9/12 (16 calls). The bar is not met.
+
+The next prompt pass copies a parent `$ref` into the few-shot example and bans ids that start with `example_`, so a repair cannot treat the example id as an external producer. The prompt also tells the model that two operations on the same value in parallel are siblings. That pass is not scored yet. Do not mark the bar met from the 10/12 replan arm. `DEFAULT_MODEL` stays `qwen2.5:14b`. GBNF stays off the Ollama path until this prompt pass is measured.
 
 ## 1. Live toy remeasure — done 2026-10-06
 
