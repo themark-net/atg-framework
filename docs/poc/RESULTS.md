@@ -61,9 +61,42 @@ uv run --inexact python examples/poc_suite.py --live --model qwen3.6:35b --only 
 
 `qwen2.5:14b` finished every arm at success 0/12, `plan_ok` false, `llm_calls` 12, `compile_retries` 0, `tool_calls` 0. All 36 rows are `LLMError: ollama request failed for qwen2.5:14b: HTTP Error 400: Bad Request`. The 35b arm was stopped after 4 tasks (`add_pair`, `mul_pair`, `scale_sum`, `parallel_sums` on the localized arm), each the same HTTP 400, so it is not a 12-task score. llama-server's body was `json_schema: type must be string, but is object`. The schema's `RefBinding` property is named `$ref`. That is Decision 0026. This pass did not measure plan quality. The last measured generation result remains the 1/12 table above.
 
-A corrected client sends `ollama_format_schema` and sets `think` false. That rerun is not in this file yet. The bar is still at least 8/12 success on one tag, and localized `llm_calls` below global replan with success no worse.
+Corrected client, Decision 0026, git `a80a4ba2e82001d348e94a3b3468b7715050290b`. Same command and the same two tags. Ollama 0.30.8. No pull. The run started `2026-11-08T12:24:02-08:00` and finished `2026-11-08T12:43:04-08:00`. Reports: `docs/poc/live-qwen25-14b-2026-11-08.json` and `docs/poc/live-qwen36-35b-2026-11-08.json`. Both process exits were 1 because some tasks missed the expected sink. That is the measurement.
 
-GBNF (`decomposition_gbnf`, `--grammar` with `--client openai`) is implemented for llama-server and was not used for this Ollama rerun.
+`qwen2.5:14b`:
+
+| Arm | Success | Valid plans | LLM calls | Tool calls | Frozen reuse | Repairs | Compile retries | Wall | Widest wave |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Localized repair | 7/12 | 11/12 | 20 | 33 | 5 | 3 | 4 | 274 s | 3 |
+| Global replan | 10/12 | 12/12 | 17 | 48 | 0 | 4 | 1 | 286 s | 3 |
+| Sequential | 10/12 | 12/12 | 13 | 45 | 0 | 0 | 1 | 203 s | 1 |
+
+`qwen3.6:35b`:
+
+| Arm | Success | Valid plans | LLM calls | Tool calls | Frozen reuse | Repairs | Compile retries | Wall | Widest wave |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Localized repair | 7/12 | 9/12 | 22 | 24 | 0 | 1 | 6 | 180 s | 3 |
+| Global replan | 9/12 | 12/12 | 16 | 48 | 0 | 4 | 0 | 118 s | 3 |
+| Sequential | 8/12 | 12/12 | 12 | 42 | 0 | 0 | 0 | 81 s | 1 |
+
+Per task, actual sink (`Y` expected value, `n` miss). `L` localized, `G` global replan, `S` sequential.
+
+| Task | Expected | 14b L | 14b G | 14b S | 35b L | 35b G | 35b S |
+| --- | ---: | --- | --- | --- | --- | --- | --- |
+| add_pair | 5 | Y 5 | Y 5 | Y 5 | Y 5 | Y 5 | Y 5 |
+| mul_pair | 42 | Y 42 | Y 42 | Y 42 | Y 42 | Y 42 | Y 42 |
+| scale_sum | 20 | Y 20 | Y 20 | Y 20 | Y 20 | Y 20 | Y 20 |
+| parallel_sums | 10 | Y 10 | Y 10 | Y 10 | Y 10 | Y 10 | Y 10 |
+| parallel_prod | 29 | Y 29 | Y 29 | Y 29 | Y 29 | Y 29 | Y 29 |
+| diamond | 18 | n 14 | n 14 | n 14 | n 12 | n 12 | n 12 |
+| three_wide | 12 | Y 12 | Y 12 | Y 12 | Y 12 | Y 12 | Y 12 |
+| nested_chain | 36 | Y 36 | Y 36 | Y 36 | Y 36 | Y 36 | Y 36 |
+| fail_parallel | 25 | n | Y 25 | Y 25 | n | n | n |
+| fail_chain | 21 | n 20 | Y 21 | Y 21 | n | n | n |
+| fail_diamond | 14 | n 24 | n 24 | n 24 | n 2 | Y 14 | n |
+| fail_wide | 12 | n 8 | Y 12 | Y 12 | n | Y 12 | Y 12 |
+
+Localized repair did not beat full replan. On both tags it solved fewer tasks and used more model calls. The best arm is global replan on `qwen2.5:14b` at 10/12. The bar (8/12 and localized calls below replan with success no worse) is not met. `diamond` compiled on every arm and still returned the wrong sink, so repair never started. The 14b localized repair of `fail_parallel` exhausted the compile budget on an external `$ref` to `step.outputs.value`, which is the id in the few-shot example. GBNF was not used for this Ollama rerun.
 
 ## What this repository does not claim
 
