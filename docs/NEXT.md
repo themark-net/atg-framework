@@ -12,7 +12,7 @@ Decision 0025. The 2026-10-06 `qwen3.6:35b` suite was 1/12 valid plans, so repai
 
 Decision 0026. Ollama receives that schema with `$defs` inlined and with no property named `$ref`, and structured calls set `think` false. The corrected live sweep on `a80a4ba` is in `docs/poc/RESULTS.md`. Localized repair was 7/12 on both `qwen2.5:14b` (20 model calls) and `qwen3.6:35b` (22). Full replan was 10/12 (17 calls) and 9/12 (16 calls). The bar is not met.
 
-The next prompt pass copies a parent `$ref` into the few-shot example and bans ids that start with `example_`, so a repair cannot treat the example id as an external producer. The prompt also tells the model that two operations on the same value in parallel are siblings. That pass is not scored yet. Do not mark the bar met from the 10/12 replan arm. `DEFAULT_MODEL` stays `qwen2.5:14b`. GBNF stays off the Ollama path until this prompt pass is measured.
+The prompt pass on `d8bbe78` is scored in `docs/poc/RESULTS.md`. Localized repair was 7/12 on both tags (`qwen2.5:14b` 25 model calls, `qwen3.6:35b` 20). Full replan was 9/12 on both (21 and 16 calls). The bar is not met. `qwen2.5:14b` `diamond` is now 18 on every arm. `qwen3.6:35b` `diamond` is 10 on every arm. The 14b repair of `fail_diamond` still emitted `example_src`, because that id is in the example when the parent has no `$ref`. The next change is to omit a `$ref` from the example unless the producer is already on the parent, then remeasure on fresh journals. Do not mark the bar met from the 9/12 replan arm. `DEFAULT_MODEL` stays `qwen2.5:14b`. GBNF is still unused. It does not fix a valid plan whose sink is wrong.
 
 ## 1. Live toy remeasure — done 2026-10-06
 
