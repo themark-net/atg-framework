@@ -80,7 +80,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 
 - `run_task` calls compile, thought, repair, and execute. Thought repairs that name a node run before execute (Decision 0020).
 - `compile_task` and `repair_graph` call `propose_subgraph`, which calls `complete_structured` with `planning_model` and then `assert_interface_preserved`. A validator failure is sent back until `max_compile_attempts`.
-- The few-shot example takes its tool name from the registry. Its node ids start with `example_`, and the prompt forbids emitting those ids. When the parent already has a `$ref`, the example copies that ref and does not invent a producer.
+- The few-shot example takes its tool name from the registry. Its node id starts with `example_`, and the prompt forbids emitting that prefix. When the parent already has a `$ref`, the example copies that ref. When the parent has none, every example input is a literal.
 - `OllamaClient` turns that schema into `ollama_format_schema` (no `$defs`, no property named `$ref`) and sets `think` false (Decision 0026). `OpenAICompatClient` sends the Pydantic schema unchanged.
 - `execute` calls `mark_ready`, `transition`, and the runner. It does not call the LLM.
 - Adapters call `run_task` only. They do not import LangGraph or DSPy.
@@ -95,7 +95,7 @@ The default pytest run does not call Ollama. `ATG_RUN_INTEGRATION=1 uv run pytes
 - Core modules do not import LiteLLM, LangGraph, or DSPy.
 - A node that is still `running` at the start of `execute` becomes `failed` and its callable is not invoked (Decision 0020).
 - `save_history` replaces the checkpoint. A failed write leaves the previous file.
-- A `$ref` in the few-shot example is either a node id declared in that example or a `$ref` already on the parent. The example does not introduce an external producer.
+- A `$ref` in the few-shot example is a `$ref` already on the parent. The example does not introduce a producer id.
 
 ### Extension points
 

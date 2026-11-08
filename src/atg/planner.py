@@ -348,10 +348,11 @@ def _messages(
 def _catalog_example(node: TaskNode, registry: ToolRegistry) -> dict[str, Any] | None:
     """One example whose tool name and parameter names come from the registry.
 
-    Ids start with ``example_`` and the prompt forbids emitting them. When the
-    parent already has a ``$ref``, the example copies that ref and does not
-    invent a producer. A repair was copying the old id ``step`` as an external
-    ref (2026-11-08 ``fail_parallel``).
+    The node id starts with ``example_`` and the prompt forbids emitting it.
+    A ``$ref`` appears only when that producer is already on the parent, and
+    then the example copies the parent's ref. A root example is literals
+    only, so it has no producer id to copy. Repairs were copying ``step``
+    (2026-11-08 ``fail_parallel``) and ``example_src`` (``fail_diamond``).
     """
 
     tools = registry.as_openai_tools()
@@ -362,46 +363,23 @@ def _catalog_example(node: TaskNode, registry: ToolRegistry) -> dict[str, Any] |
     outputs = list(node.declared_outputs) or ["value"]
     parent_refs = _parent_ref_strings(node)
     if parent_refs:
-        consumer: dict[str, Any] = {params[0]: {"$ref": parent_refs[0]}}
+        inputs: dict[str, Any] = {params[0]: {"$ref": parent_refs[0]}}
         for name in params[1:]:
-            consumer[name] = 1
-        return {
-            "nodes": [
-                {
-                    "id": "example_dst",
-                    "name": "example_dst",
-                    "tool_name": function["name"],
-                    "inputs": consumer,
-                    "declared_outputs": outputs,
-                    "refine": False,
-                }
-            ],
-            "edges": [],
-        }
-    literals = {name: index + 1 for index, name in enumerate(params)}
-    consumer = {params[0]: {"$ref": f"example_src.outputs.{outputs[0]}"}}
-    for name in params[1:]:
-        consumer[name] = 1
+            inputs[name] = 1
+    else:
+        inputs = {name: index + 1 for index, name in enumerate(params)}
     return {
         "nodes": [
-            {
-                "id": "example_src",
-                "name": "example_src",
-                "tool_name": function["name"],
-                "inputs": literals,
-                "declared_outputs": outputs,
-                "refine": False,
-            },
             {
                 "id": "example_dst",
                 "name": "example_dst",
                 "tool_name": function["name"],
-                "inputs": consumer,
+                "inputs": inputs,
                 "declared_outputs": outputs,
                 "refine": False,
-            },
+            }
         ],
-        "edges": [{"src": "example_src", "dst": "example_dst"}],
+        "edges": [],
     }
 
 

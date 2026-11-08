@@ -182,9 +182,11 @@ def test_prompt_uses_a_catalog_few_shot_and_credits_the_paper():
     assert "two operations to the same value in parallel" in system
     assert example["nodes"][0]["tool_name"] == "add"
     assert example["nodes"][0]["inputs"] == {"a": 1, "b": 2}
-    assert example["nodes"][1]["inputs"]["a"] == {"$ref": "example_src.outputs.value"}
-    assert set(_ref_producers(example)) <= node_ids
-    assert node_ids == {"example_src", "example_dst"}
+    assert example["edges"] == []
+    assert _ref_producers(example) == []
+    assert "$ref" not in mock.seen[0][1]["content"]
+    assert node_ids == {"example_dst"}
+    assert "example_src" not in mock.seen[0][1]["content"]
     assert "step" not in mock.seen[0][1]["content"]
     assert user["sink_outputs"] == ["value"]
     assert "validator_error" not in user
