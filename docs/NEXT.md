@@ -1,5 +1,8 @@
 # What’s next
 
+**Stopped 2026-11-08 (Mark):** negative result on the localized-repair bar. Items 2 to 4 cancelled. OQ-0016 and OQ-0017 are `wont-do`. See [`ops/HANDOFF-atg-finish-1108.md`](ops/HANDOFF-atg-finish-1108.md). Do not start another finish session for those items.
+
+
 Ordered work from 2026-10-05. Phase checkboxes stay in [`TODO.md`](TODO.md). Binding choices stay in [`DECISIONS.md`](DECISIONS.md). How to run the library, by skill level, is [`USING.md`](USING.md).
 
 The 2026-11-08 finish run is [`ops/HANDOFF-atg-finish-1108.md`](ops/HANDOFF-atg-finish-1108.md). Item 1 is parked. Items 2, 3, and 4 did not start. SHAs, the five scored passes, rerun commands, and the open questions are in that note.
@@ -16,7 +19,7 @@ Decision 0026. Ollama receives that schema with `$defs` inlined and with no prop
 
 The prompt passes are scored in `docs/poc/RESULTS.md`. Session 4 (`55de9a6`) put the child `$ref` back on the root example. `qwen2.5:14b` full replan and sequential were 10/12. Localized repair was 5/12 (26 model calls) against 20 calls for full replan. `qwen3.6:35b` localized was 7/12 (20 calls) against 9/12 (16 calls). The bar is not met. The misses that never ran a tool were a self-edge, a `$ref` whose edge was omitted, or a repair that reused a parent producer id. Decision 0027 drops the self-edge, adds the edge an internal `$ref` already names, and puts the original task sentence on the repair note. `$ref` strings are not rewritten.
 
-Session 5 (`b83acea`) measured that compiler change. `qwen3.6:35b` localized repair was 9/12 (23 model calls) against full replan 10/12 (16 calls). Sequential was 10/12 (12 calls). `qwen2.5:14b` localized repair was 5/12 (23 calls) against full replan 8/12 (18 calls). The best arm across the five live passes is 10/12. Localized repair has not beaten full replan on model calls with success no worse. The closest pass is session 3 on `qwen3.6:35b`, a tie at 2/12 and 32 calls. Every other scored pass has fewer localized successes and more localized model calls. The bar is unmet, and the item is parked. A replan arm of 10/12 does not close it. `DEFAULT_MODEL` stays `qwen2.5:14b`. OQ-0016 and OQ-0017 stay open. GBNF stayed unused. The session 5 misses are wrong sinks, missing sinks, an example id, and repairs that leave a parent output unconsumed. Details are in `docs/poc/RESULTS.md`.
+Session 5 (`b83acea`) measured that compiler change. `qwen3.6:35b` localized repair was 9/12 (23 model calls) against full replan 10/12 (16 calls). Sequential was 10/12 (12 calls). `qwen2.5:14b` localized repair was 5/12 (23 calls) against full replan 8/12 (18 calls). The best arm across the five live passes is 10/12. Localized repair has not beaten full replan on model calls with success no worse. The closest pass is session 3 on `qwen3.6:35b`, a tie at 2/12 and 32 calls. Every other scored pass has fewer localized successes and more localized model calls. The bar is unmet, and the item is parked. A replan arm of 10/12 does not close it. `DEFAULT_MODEL` stays `qwen2.5:14b`. OQ-0016 and OQ-0017 are `wont-do` (Mark stopped 2026-11-08). GBNF stayed unused. The session 5 misses are wrong sinks, missing sinks, an example id, and repairs that leave a parent output unconsumed. Details are in `docs/poc/RESULTS.md`.
 
 ## 1. Live toy remeasure — done 2026-10-06
 

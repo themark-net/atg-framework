@@ -4,6 +4,18 @@
 
 This is an **independent reimplementation** of ideas from the research literature. It is **not** an official release from the paper authors.
 
+## Status: stopped 2026-11-08, negative result
+
+Mark stopped the ATG finish work on 2026-11-08 at 4:21pm PT. Items 2 to 4 (ALFWorld reproduction, pfy-mentat planning with ATG, and the OQ-0016 / adapters work) are cancelled.
+
+Item 1 ran six sessions on local models (`qwen2.5:14b` and `qwen3.6:35b`, 12-task suite):
+
+- Graph validity is now mostly fine. The best arm scored 10/12. The best localized arm scored 9/12 (`qwen3.6:35b`, session 5).
+- Localized repair never beat full replan on model calls while succeeding at least as often. In session 5, `qwen3.6:35b` scored localized 9/12 with 23 calls, replan 10/12 with 16 calls, and sequential 10/12 with 12 calls. `qwen2.5:14b` scored localized 5/12 with 23 calls, replan 8/12 with 18 calls, and sequential 8/12 with 12 calls.
+- The paper's localized-repair advantage did not reproduce at this scale.
+
+Write-up: commit `ae4891a`. Handoff: [`docs/ops/HANDOFF-atg-finish-1108.md`](docs/ops/HANDOFF-atg-finish-1108.md) (`31fda31`). OQ-0016 and OQ-0017 are closed as `wont-do`.
+
 ## Citation & attribution
 
 Core design is based on:
@@ -43,7 +55,7 @@ BibTeX:
 
 This repository is the development tree for those ideas. The [local-llm-dev-tools catalog](https://github.com/themark-net/local-llm-dev-tools) links the ATG entry in TOOLS.md for analysis, feasibility scoring, and distilled methodology.
 
-**Current status:** The MVP loop is implemented and covered by unit tests: compile a task to a DAG, run independent tools together, and repair a failed region without re-running frozen nodes. An offline example prints a two-branch sum. A live Ollama path reads `ATG_MODEL` (default `qwen2.5:14b`, Decision 0023). On 2026-10-06 `--live --model qwen2.5:14b --only` exited 0 with two parallel waves and sink value 25. The 2026-10-05 failures for `llama3.1:8b`, an earlier 14B parent-id edge, and `gemma4:latest` stay on Decision 0017. Not production-ready. The software license is MIT (Decision 0019).
+**Current status (stopped 2026-11-08):** Mark recorded a negative result on the live localized-repair bar and cancelled items 2 to 4. See the Status section above. The MVP loop is still implemented and covered by unit tests: compile a task to a DAG, run independent tools together, and repair a failed region without re-running frozen nodes. An offline example prints a two-branch sum. A live Ollama path reads `ATG_MODEL` (default `qwen2.5:14b`, Decision 0023). On 2026-10-06 `--live --model qwen2.5:14b --only` exited 0 with two parallel waves and sink value 25. The 2026-10-05 failures for `llama3.1:8b`, an earlier 14B parent-id edge, and `gemma4:latest` stay on Decision 0017. Not production-ready. The software license is MIT (Decision 0019).
 
 The library runs without Grok. Start with [`docs/USING.md`](docs/USING.md) (newcomer, tool author, local model on nimo-class hardware, then adapters). Ordered next work is [`docs/NEXT.md`](docs/NEXT.md).
 

@@ -29,8 +29,8 @@
 | [OQ-0013](#oq-0013-dspy--langgraph-adapter-depth) | P2 | promoted-to-adr | DSPy / LangGraph adapter depth | — | Decision 0016 |
 | [OQ-0014](#oq-0014-persistence--memory-backend) | P2 | promoted-to-adr | Persistence / memory backend | — | Decision 0015 |
 | [OQ-0015](#oq-0015-default-example-model-tags) | P2 | promoted-to-adr | Default example model tags | — | Decision 0017 |
-| [OQ-0016](#oq-0016-repair-escalation-policy) | P2 | open | Repair escalation policy | Repeated failures | Decision 0014 |
-| [OQ-0017](#oq-0017-which-local-server-runs-the-next-live-comparison) | P2 | open | Which local server runs the next live comparison | Live runtime comparison | Decision 0021 |
+| [OQ-0016](#oq-0016-repair-escalation-policy) | P2 | wont-do | Repair escalation policy | — | Decision 0014 |
+| [OQ-0017](#oq-0017-which-local-server-runs-the-next-live-comparison) | P2 | wont-do | Which local server runs the next live comparison | — | Decision 0021 |
 
 ---
 
@@ -543,7 +543,7 @@ You can say “R1” and then override individual letters.
 ### OQ-0016: Repair escalation policy
 
 - **Priority:** P2  
-- **Status:** open  
+- **Status:** wont-do  
 - **Created:** 2026-09-20  
 - **Updated:** 2026-11-08  
 - **Blocks:** —  
@@ -569,17 +569,18 @@ You can say “R1” and then override individual letters.
 
 - **2026-10-05:** Recorded from `cursor/first-pass-atg-loop-b0e3` (`1982c58`). Not implemented. That branch’s `$parent` input convention was not copied. Decision 0012 already fixes literals and `$ref`.
 - **2026-10-07:** The branch was not merged. `main` keeps `run_task`. `escalate_after` stays out until a live double failure says otherwise.
-- **2026-11-08:** Session 5 live suite, git `b83acead7fb5e5399a79fba7e9a2bd660f46617a`, Ollama `qwen2.5:14b`. Localized `scale_sum` and `parallel_prod` each spent `repairs=2` (the Decision 0014 cap) and finished with no unique sink (`actual` null, `plan_ok` true). Full replan of those two tasks also finished with no unique sink (`repairs=1`). Sequential replay of the first plan did too. A wider parent is not shown to fix them on this run. `escalate_after` stays out. Status stays open. Recommendation stays (1).
+- **2026-11-08:** Session 5 live suite, git `b83acead7fb5e5399a79fba7e9a2bd660f46617a`, Ollama `qwen2.5:14b`. Localized `scale_sum` and `parallel_prod` each spent `repairs=2` (the Decision 0014 cap) and finished with no unique sink (`actual` null, `plan_ok` true). Full replan of those two tasks also finished with no unique sink (`repairs=1`). Sequential replay of the first plan did too. A wider parent is not shown to fix them on this run. `escalate_after` stays out. Recommendation stays (1).
+- **2026-11-08 (stop):** Mark stopped the ATG finish work and cancelled items 2 to 4. Localized repair did not beat full replan on model calls at this scale. No further escalation-policy work. Status set to `wont-do`. Decision 0014 stands (same region, then stop).
 
 ---
 
 ### OQ-0017: Which local server runs the next live comparison
 
 - **Priority:** P2
-- **Status:** open
+- **Status:** wont-do
 - **Created:** 2026-10-06
-- **Updated:** 2026-10-07
-- **Blocks:** a measured choice of live server after the Ollama default
+- **Updated:** 2026-11-08
+- **Blocks:** —
 - **Blocked-by:** Lemonade still has no scored toy. The home vLLM toy is scored.
 - **Related-ADR:** Decision 0021, Decision 0023
 - **Related-code:** `src/atg/llm.py` (`OllamaClient`, `OpenAICompatClient`), `examples/toy_parallel.py`
@@ -620,6 +621,7 @@ On 2026-10-07 `/home/mark/vllm-rocm/.venv` imports `vllm` 0.29.1.dev0 (ROCm 10.1
   ```
 
   Exit 1. No success line, so no sink value and no width. `repair.py` raises that `RepairError` when a replacement subgraph fails `assert_interface_preserved`. Host at start: MemAvailable 47533472 kB, SwapFree 4982220 kB, SwapTotal 8388604 kB. At the end: MemAvailable 47087928 kB, SwapFree 4982420 kB. Not a lockup. `DEFAULT_MODEL` stays `qwen2.5:14b`. No decision to swap. The server was stopped after the run. Lemonade was not started.
+- **2026-11-08 (stop):** Mark stopped the ATG finish work and cancelled the remaining live-comparison work. No further Lemonade or vLLM comparison. Status set to `wont-do`. Decision 0023 (Ollama `qwen2.5:14b` default) stands.
 
 ---
 

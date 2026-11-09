@@ -1,5 +1,7 @@
 # TODO — Master Backlog (atg-framework)
 
+**Stopped 2026-11-08 (Mark):** negative result. Items 2 to 4 cancelled. OQ-0016 and OQ-0017 are `wont-do`. Handoff: [`ops/HANDOFF-atg-finish-1108.md`](ops/HANDOFF-atg-finish-1108.md).
+
 **Purpose:** Ordered next steps and phase gates.  
 **Not for:** Long-form design (→ [`ARCHITECTURE.md`](ARCHITECTURE.md)), binding choices (→ [`DECISIONS.md`](DECISIONS.md)), parked questions (→ [`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md)).
 
@@ -13,8 +15,8 @@
 2. Offline demo: `uv run python examples/toy_parallel.py`. How to use the library, by skill level, is [`NEXT.md`](NEXT.md) and [`USING.md`](USING.md).  
 3. Live 14B remeasure is done. Decision 0023 sets `DEFAULT_MODEL` to `qwen2.5:14b`. Decision 0017 records the 2026-10-05 failures and is superseded.  
 4. The software license is MIT (Decision 0019). The 2026-10-05 gap check is Decision 0020. Decisions 0021–0024 cover the OpenAI client, toy PoC metrics, the 14B default, and short `$ref` compile errors.  
-5. **OQ-0016** is open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen. The 2026-10-06 live runs did not show that double failure. The Cursor branch’s `escalate_after` was not merged.  
-6. **OQ-0017** is open. On 2026-10-07 one home vLLM toy (`Qwen/Qwen2.5-14B-Instruct-AWQ` on `127.0.0.1:8001`) exited 1: `RepairError: subgraph does not consume parent inputs`. Decision 0023 stays the default. Lemonade is still unscored.  
+5. **OQ-0016** is `wont-do` (Mark stopped 2026-11-08). Was open: whether a second failure of the same repair region should widen to the parent. Decision 0014 does not widen. The 2026-10-06 live runs did not show that double failure. The Cursor branch’s `escalate_after` was not merged.  
+6. **OQ-0017** is `wont-do` (Mark stopped 2026-11-08). On 2026-10-07 one home vLLM toy (`Qwen/Qwen2.5-14B-Instruct-AWQ` on `127.0.0.1:8001`) exited 1: `RepairError: subgraph does not consume parent inputs`. Decision 0023 stays the default. Lemonade is still unscored.  
 7. pfy-mentat #279 is merged at catalog stage I2. Publishing on X is still [`ops/x-publishing-handoff.md`](ops/x-publishing-handoff.md). Do not post from this backlog.
 8. The 2026-11-08 finish handoff is [`ops/HANDOFF-atg-finish-1108.md`](ops/HANDOFF-atg-finish-1108.md). Item 1 is parked. Items 2-4 did not start.
 9. **Decisions 0025, 0026, and 0027** (2026-11-08) are parked on the live bar. The planner schema comes from the graph `$ref` pattern, and a rejected plan is sent back up to 3 times (`compile_retries`, not `repairs`). Ollama `format` inlines `$defs` and does not name a `$ref` property. Decision 0027 drops a self-edge and adds an edge an internal `$ref` already names. Session 5 (`b83acea`) is in `docs/poc/RESULTS.md`: `qwen3.6:35b` full replan 10/12 (16 calls), localized 9/12 (23 calls); `qwen2.5:14b` full replan 8/12 (18 calls), localized 5/12 (23 calls). The best arm across five live passes is 10/12. Localized repair has not beaten full replan on model calls with success no worse (session 3 on `qwen3.6:35b` tied at 2/12 and 32 calls; every other scored pass has fewer localized successes and more localized model calls). Do not close this from the 2026-10-06 1/12 table, the HTTP 400 table, or a replan arm.

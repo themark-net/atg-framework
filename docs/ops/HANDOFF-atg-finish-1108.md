@@ -14,14 +14,24 @@ Observed while writing this note:
 
 "Did not land" means the item definition of done failed. The commits themselves are on `origin/main`.
 
+## Status: stopped 2026-11-08, negative result
+
+Mark stopped this finish run on 2026-11-08 at 4:21pm PT. Record the negative result. Do not start another finish session for items 1 to 4.
+
+- Item 1 (six sessions, `qwen2.5:14b` and `qwen3.6:35b`, 12-task suite): graph validity is mostly fine (best arm 10/12, best localized 9/12 on `qwen3.6:35b` in session 5). Localized repair never beat full replan on model calls while succeeding at least as often. Session 5: `qwen3.6:35b` localized 9/12 with 23 calls, replan 10/12 with 16 calls, sequential 10/12 with 12 calls; `qwen2.5:14b` localized 5/12 with 23 calls, replan 8/12 with 18 calls, sequential 8/12 with 12 calls. The paper's localized-repair advantage did not reproduce at this scale. Write-up `ae4891a`. This handoff `31fda31`.
+- Items 2 to 4 (ALFWorld, OQ-0016 / adapters / metrics, pfy-mentat plans with ATG) are cancelled by Mark. They never started.
+- OQ-0016 and OQ-0017 are closed as `wont-do` in [`../OPEN_QUESTIONS.md`](../OPEN_QUESTIONS.md).
+
+The old finish driver (pid 3552321) is gone. Do not relaunch `tmp/finish`.
+
 ## Item status
 
 | Item | Status | SHAs | Numbers |
 | --- | --- | --- | --- |
 | 1. Valid graphs from local models | Parked. Both halves of the bar were required. The success half was met. The comparison half was not. | Code and scores are the nine commits under "Commits on main". Last measurement `b83acea`. Score writeup `ae4891a`. | Best arm 10/12. Best localized 9/12 with more model calls than full replan. See the table below. |
-| 2. ALFWorld | Not started. The driver did not open a session. | None. | No adapter, no extra, no `ALFWORLD_DATA`, no `docs/poc/ALFWORLD.md`, no eval numbers. |
-| 3. OQ-0016, adapters, metrics | Not started. | None. | OQ-0016 still open. Adapters are still the Decision 0016 stubs. `Metrics` has no token or latency fields. |
-| 4. pfy plans with ATG | Not started. This run never entered a pfy-mentat worktree. | No new pin. The item ticket still names ATG `543e778` and offline receipt `e50ac215`. This session did not re-read that checkout. | No live receipt, no model-call count, no new handoff in pfy-mentat. |
+| 2. ALFWorld | Cancelled by Mark on 2026-11-08. Never started. | None. | No adapter, no extra, no `ALFWORLD_DATA`, no `docs/poc/ALFWORLD.md`, no eval numbers. |
+| 3. OQ-0016, adapters, metrics | Cancelled by Mark on 2026-11-08. Never started. OQ-0016 and OQ-0017 closed as `wont-do`. | None. | Adapters stay Decision 0016 stubs. `Metrics` has no token or latency fields. |
+| 4. pfy plans with ATG | Cancelled by Mark on 2026-11-08. Never started. | No new pin. | No live receipt, no model-call count. pfy-mentat records the negative result and holds ATG at I2. |
 
 ## What is parked, and why
 
